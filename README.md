@@ -336,16 +336,42 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
         the discarded part was the decoration around it. Output should be a named
         bias with evidence, which can be written into `AGENTS.md` and inspected,
         not an optimised prompt string, which can only drift.
-      - Roster suggestion. Not learned routing: twenty councils over five
-        question types is four observations per cell, with an outcome label
-        confounded by ordering, cost and habit. Render the record honestly
-        instead ("six similar councils, you took Opus 5's option three times")
-        and leave the judgement with the user, on the same grounds as having no
-        judge model. The part that does work without learning is quota: agy is
+      - Contribution review. Who actually contributed, judged by a model
+        reading the record. This is not a statistics problem and the data-sparsity
+        objection was the wrong frame: one transcript holds dozens of observable
+        moments, so ten councils are not ten observations. It also does not
+        violate "no judge": judging the *answer* flattens the disagreement that
+        is the point, judging the *answerers* is a different job whose output
+        feeds a roster choice the user was making by hand anyway.
+
+        The rubric is what makes the soft question usable. Origination
+        (introduced something nobody else had, which survived); load-bearing
+        versus decorative; **productive wrongness** (a rejected contribution that
+        caused the right answer, e.g. a wrong hypothesis that forced a
+        measurement); correction of another member or of a premise;
+        **compression** (saying "you don't need that", since deletions were the
+        most valuable moves in the design conversation behind this repo and no
+        count of additions can see them); padding; and deference versus genuine
+        agreement after seeing the synthesis. Four of those seven are
+        unreachable by counting, which is the case for a reader over a metric.
+
+        Two design choices decide whether it works. **Blind the judge**: rate
+        participants A/B/C from the archive and unmask afterwards, because the
+        output is literally "which brand should I use" and this is the one place
+        where brand priors contaminate the conclusion directly. And **not the
+        secretary**: it wrote the synthesis, so it would be grading its own
+        clustering, and if it also sat as a member it would be grading itself. A
+        fresh instance with no stake, and one that did not participate.
+
+        Output is prose, not a score. A number invites false precision and
+        averaging over incommensurable things. A short written assessment per
+        member per council accumulates into what gets read before choosing a
+        roster. The judge's assessment is itself a model opinion with systematic
+        tastes, probably favouring articulate structured answers over terse
+        correct ones, which is exactly why it stays text the user can disagree
+        with rather than a number that quietly drives routing.
+      - Quota-aware roster suggestion. Needs no learning and works today: agy is
         the scarce resource, so a suggestion that knows the week's agy use is
-        deterministic and useful.
-- [ ] Secretary session rotation at a round boundary.
-- [ ] Resolve agy's `--effort` versus model-slug precedence by experiment, and
-      decide how to surface agy quota use.
-- [ ] Measure whether `claude -p` gets the 5-minute or the 1-hour cache TTL. It
-      changes nothing structural, only expectations.
+        deterministic and useful. Note the roster granularity already designed
+        (`default`, `wide`, `cheap`) beats learned routing anyway, since a
+        one-word choice is the right resolution for this decision.
