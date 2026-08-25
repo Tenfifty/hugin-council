@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hugin-council"
+version = "0.1.0"
+description = "Ask one question, get answers from several models, folded into one map."
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "David Fendrich" }]
+dependencies = [
+    "hugin>=0.1.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+hugin-council = "hugin_council.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hugin_council = ["prompts/*.md"]

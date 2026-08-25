@@ -26,6 +26,35 @@ worth having.
 
 Rounds repeat 2 and 2b. Your turn goes to every member verbatim.
 
+## Using it
+
+```bash
+hugin-council ask "how should I do this?"        # new council, phase 1 then round 1
+hugin-council ask "..." --roster wide            # spend the agy quota
+hugin-council ask "..." --no-gather              # skip phase 1
+hugin-council ask "..." --member agy:gemini-3.1-pro-high   # append one for this run
+hugin-council ask "..." --secretary codex:gpt-5.6-sol --secretary-effort xhigh
+hugin-council resume                             # latest council
+hugin-council resume 2026-08-25-some-question
+hugin-council list
+```
+
+Inside a council:
+
+```
+council> ...            broadcast to the members, then synthesis
+serial>  ...            the secretary only; never reaches the members
+/serial /s  /council /c switch mode
+> ...                   one-shot to the secretary without leaving council mode
+/promote <text>         carry something from serial into the next broadcast
+/solo [text]            dismiss the members for good, recording the outcome
+/brief  /map  /status   print the brief, the latest synthesis, the roster
+```
+
+Config is `~/.config/hugin/council.yaml` over `~/.config/hugin/hugin.yaml`; see
+`config.example.yaml`. It runs with no `council.yaml` at all, since the built-in
+defaults carry the same rosters.
+
 ## Decisions
 
 ### The map is prose. The archive is the structure.
@@ -188,12 +217,14 @@ Named rosters keep flag surgery out of daily use, and put the scarce agy quota
 where it belongs, in the wide roster and nowhere else:
 
 ```yaml
-secretary: claude:opus-5:high
-rosters:
-  default: [claude:opus-5:high, claude:fable-5:high, codex:gpt-5.6-sol:high]
-  wide:    [claude:opus-5:high, claude:fable-5:high, codex:gpt-5.6-sol:high,
-            codex:gpt-5.5:xhigh, agy:gemini-3.1-pro-high, agy:gemini-3.7-flash-high]
-  cheap:   [claude:fable-5:medium, codex:gpt-5.4-mini:medium]
+council:
+  secretary: claude:claude-opus-5:high
+  roster: default
+  rosters:
+    default: [claude:claude-opus-5:high, claude:claude-fable-5:high, codex:gpt-5.6-sol:high]
+    wide:    [claude:claude-opus-5:high, claude:claude-fable-5:high, codex:gpt-5.6-sol:high,
+              codex:gpt-5.5:xhigh, agy:gemini-3.1-pro-high, agy:gemini-3.7-flash-high]
+    cheap:   [claude:claude-fable-5:medium, codex:gpt-5.4-mini:medium]
 ```
 
 `--roster wide` selects, `--member` appends for a one-off, `--secretary`,
@@ -318,21 +349,21 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       `session-abstraction` in `~/projs/hugin`.
 - [x] Diff deferred out of v1, in favour of the full map plus independence
       framing. See "Scope of v1".
-- [ ] Synthesis prompt. Free-text markdown, and the only hard formatting rule is
+- [x] Synthesis prompt. Free-text markdown, and the only hard formatting rule is
       stable numbering of the options so a turn can be broadcast verbatim. Plus
       the constraint that the secretary may classify and compress but not resolve
       a disagreement or invent a middle position nobody proposed.
-- [ ] Archive layout as above, with raw answers kept verbatim. This is the one
+- [x] Archive layout as above, with raw answers kept verbatim. This is the one
       part that has to be right from the start, because it is what makes a
       structure extractable later at all.
 - [ ] After 10 to 20 real councils: read the archive and see what a data
       structure would actually need to hold. Not before.
-- [ ] **cwd-aware context resolution.** The command must run from anywhere. Under
+- [x] **cwd-aware context resolution.** The command must run from anywhere. Under
       a `~/projs` subdirectory phase 1 should look at that repo *and* the general
       hugin directories. Anywhere else, the hugin vault is the default, with the
       current directory available as a weak hint for finding files the question
       refers to.
-- [ ] Phase 1 gatherer. Per source: path or URL, what it says, a line on why it
+- [x] Phase 1 gatherer. Per source: path or URL, what it says, a line on why it
       is relevant. Plus a short list of what it looked at and **rejected**, so a
       member can pull a thread the secretary dropped. That list is what makes one
       model's relevance judgement an acceptable price.
@@ -367,13 +398,13 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
         `AGENTS.md` is that exact failure. An extracted fact is "the document says
         X as of this date", not "X". And quote verbatim for anything load-bearing:
         a paraphrase of a number is a bug.
-- [ ] Broadcast with the status line: who is still thinking, for how long, and who
+- [x] Broadcast with the status line: who is still thinking, for how long, and who
       died. Nothing more.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.
-- [ ] Mode toggle between council and serial, with the mode shown in the prompt
+- [x] Mode toggle between council and serial, with the mode shown in the prompt
       itself, plus the second secretary session behind it and the explicit
       promote-to-broadcast command.
-- [ ] `solo`: dismiss the members, retire the council session, promote the serial
+- [x] `solo`: dismiss the members, retire the council session, promote the serial
       session. No transition turn needed, since that session was never
       restrained. `solo` also **records the outcome**: which option was taken and
       briefly why, in prose. One line, and it is what turns the archive from a

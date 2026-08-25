@@ -1,0 +1,51 @@
+# ~/.config/hugin/council.yaml
+# Merged over ~/.config/hugin/hugin.yaml; values here win. Everything below is
+# optional: the built-in defaults are the same rosters, so the tool runs with no
+# council.yaml at all as long as hugin.yaml sets vault_path.
+
+council:
+  # Holds both secretary sessions and does the file work. Pick it up front and
+  # do not swap it mid-council: continuity is the point.
+  secretary: claude:claude-opus-5:high
+
+  # Which roster `ask` uses when --roster is not given.
+  roster: default
+
+  rosters:
+    default:
+      - claude:claude-opus-5:high
+      - claude:claude-fable-5:high
+      - codex:gpt-5.6-sol:high
+    # agy appears here and nowhere else: the quota is the scarce resource, so it
+    # is spent only when breadth is asked for explicitly. Note that agy bakes the
+    # reasoning level into the gemini model slug, so no third field is needed.
+    wide:
+      - claude:claude-opus-5:high
+      - claude:claude-fable-5:high
+      - codex:gpt-5.6-sol:high
+      - codex:gpt-5.5:xhigh
+      - agy:gemini-3.1-pro-high
+      - agy:gemini-3.7-flash-high
+    cheap:
+      - claude:claude-fable-5:medium
+      - codex:gpt-5.4-mini:medium
+
+  # Run phase 1 by default. Override per run with --gather / --no-gather.
+  gather: true
+
+  # State, not output: safe to wipe. The finished write-up belongs in the vault.
+  state_dir: ~/.council
+
+  # A cwd under here counts as a project repo, which makes that repo the subject
+  # and brings the Hugin directories along as extra reading.
+  projects_root: ~/projs
+
+  # Always readable, wherever the command was run from. Defaults to vault_path.
+  # hugin_dirs:
+  #   - ~/notes
+
+  # Seconds per turn. Members may go looking through the vault, so not short.
+  turn_timeout: 1800
+
+  # Override any packaged prompt with your own file.
+  # synthesis_prompt_path: ~/notes/instructions/council_synthesis.md
