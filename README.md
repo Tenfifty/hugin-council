@@ -21,7 +21,8 @@ worth having.
 | 1 (optional) | secretary | Gather: find relevant vault files, past conversations, web sources. Pointers, quotes and plain facts, each with its source. No analysis, no conclusions, no resolving contradictions. |
 | 2 | members | Same question and same background to each, in parallel. Each knows it is part of a council and what that means. May look up more on its own. |
 | 2b | secretary | Synthesis: fold the answers into the map. |
-| 3 | secretary | `solo`: dismiss the members, keep the secretary, switch it to general assistant with its context intact. |
+| serial (any time) | secretary | Tab out of the council to ask the secretary something or to do work with side effects. Never enters the council context. |
+| 3 | secretary | `solo`: dismiss the members for good and continue in serial, recording which option was taken. |
 
 Rounds repeat 2 and 2b. Your turn goes to every member verbatim.
 
@@ -126,21 +127,49 @@ Two consequences to plan for:
 - Pick the secretary model up front and do not swap it mid-council, since
   continuity is the point. Default `claude:opus-5`, chosen on context size
   (1M against the ~258k codex reports in its own session meta) and because it
-  does the file writing and the phase 3 role inversion.
+  holds both secretary sessions and does the file work in the serial one.
 
-### Phase 3 is a role inversion, and that is the risk
+### The secretary has two sessions, and solo is a mode not a phase
 
-By phase 3 the secretary has spent several rounds under "no analysis, no
-conclusions, you are not a judge". Models are sticky about a role they have held
-that long, and the failure mode is quiet: an assistant that keeps hedging and
-will not recommend. So the transition turn must explicitly lift the restraint,
-not just add a new job.
+You tab between **council** and **serial**. Serial is for asking the secretary
+what a term means, or for having it do something with side effects, and then
+going back. Those exchanges must not enter the council context.
 
-It has to be sent as a **turn**, not a system prompt change: no CLI can change
-the system prompt of a live session, and `--append-system-prompt` applies at
-invocation only. Default is to mutate in place. `--fork` is available
-(`codex exec fork`, `claude --fork-session`) for when the council should stay
-reconvenable without the secretary carrying opinion mode back into it.
+That is best served by giving the secretary two sessions rather than one,
+because the two roles have incompatible standing instructions. The council
+role's defining constraint is *may not resolve*; the serial role's whole point is
+to answer. Holding both in one session means asserting and suspending that
+constraint on every tab, which is the stickiness problem below made recurrent
+instead of one-off.
+
+- The **council session** does gather and synthesis, and writes only the archive,
+  which is its own machine state.
+- The **serial session** is a general assistant, seeded from the archive
+  (question, brief, latest synthesis) and re-seeded with the newest synthesis
+  when tabbed into after further rounds. It does the arbitrary file work, which
+  keeps the blast radius legible.
+
+Nothing leaks from serial to council automatically. But a serial exchange
+sometimes produces something the council needs ("I have decided X", "the real
+constraint is Y"), so there is an explicit command that promotes a chosen passage
+into the next broadcast. A door, not a leak.
+
+This dissolves what was going to be the hardest prompt problem in the design.
+The original plan had phase 3 mutate the council session into an assistant, which
+meant a transition turn strong enough to push a model out of a role it had held
+for ten turns: models are sticky about that, and the failure mode is quiet, an
+assistant that keeps hedging and will not recommend. The serial session was never
+under the restraint, so there is nothing to lift. `solo` becomes trivial:
+dismiss the members, retire the council session, the serial session becomes
+primary.
+
+Tabbing is not a decision; `solo` is. The outcome line belongs to `solo`, not to
+looking in on the secretary.
+
+The obvious failure mode of a two-mode interface is a **mis-addressed turn**: a
+question meant for the secretary that goes to three members costs a round, and
+one meant for the council that goes to the secretary is simply lost. The mode has
+to be visible in the prompt itself, not only in the status line.
 
 ### Members are read-only, the secretary writes
 
@@ -271,8 +300,9 @@ So these do not get re-argued:
 
 ## Naming
 
-`council` because the members advise and nobody votes. Phase 3 is `solo`, which
-says what you get; `adjourn` is the right word for it and lives in the help text.
+`council` because the members advise and nobody votes. The two modes are
+`council` and `serial`. Ending the council for good is `solo`, which says what you
+get; `adjourn` is the right word for it and lives in the help text.
 Rejected: `thing` (þing is etymologically right, ungreppable in practice),
 `counsel` (homophone, bad in a command you type), `quorum` (implies a minimum for
 validity), `chorus` (unison, precisely wrong), `synod` (settles doctrine, too
@@ -340,11 +370,15 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
 - [ ] Broadcast with the status line: who is still thinking, for how long, and who
       died. Nothing more.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.
-- [ ] Phase 3 `solo`, including the restraint-lifting transition turn and
-      `--fork`. `solo` also **records the outcome**: which option was taken and
-      briefly why, in prose, at the end of the council. One line, and it is what
-      turns the archive from a pile of transcripts into a labelled record. Every
-      later analysis pass depends on it, so it is not optional.
+- [ ] Mode toggle between council and serial, with the mode shown in the prompt
+      itself, plus the second secretary session behind it and the explicit
+      promote-to-broadcast command.
+- [ ] `solo`: dismiss the members, retire the council session, promote the serial
+      session. No transition turn needed, since that session was never
+      restrained. `solo` also **records the outcome**: which option was taken and
+      briefly why, in prose. One line, and it is what turns the archive from a
+      pile of transcripts into a labelled record. Every later analysis pass
+      depends on it, so it is not optional.
 - [ ] Analysis passes over the archive, once there is an archive worth reading.
       These belong in `hugin-munin`, not here: the corpus that matters is
       already on disk (289 codex rollouts, 68 claude sessions) and the council
