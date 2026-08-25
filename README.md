@@ -311,9 +311,39 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       died. Nothing more.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.
 - [ ] Phase 3 `solo`, including the restraint-lifting transition turn and
-      `--fork`.
-- [ ] `council stats` as a postprocessing pass over the archive, once there is
-      an archive worth reading.
+      `--fork`. `solo` also **records the outcome**: which option was taken and
+      briefly why, in prose, at the end of the council. One line, and it is what
+      turns the archive from a pile of transcripts into a labelled record. Every
+      later analysis pass depends on it, so it is not optional.
+- [ ] Analysis passes over the archive, once there is an archive worth reading.
+      These belong in `hugin-munin`, not here: the corpus that matters is
+      already on disk (289 codex rollouts, 68 claude sessions) and the council
+      archive is a small clean addition to it. Sketched so far:
+      - Stale-assertion detection: claims in `AGENTS.md` that later sessions
+        disproved. The `gws` `invalid_grant` entry was wrong for six weeks and
+        actively recommended the setting that caused the problem, so this catches
+        a failure mode that additions do not. Sibling signals: user corrections
+        that recur across sessions, facts rediscovered more than once, dead ends
+        entered repeatedly.
+      - Bias naming: mine (opening proposal, final decision) pairs for
+        *systematic* over- and under-shoot. Two cautions. Optimising towards "say
+        early what the user concludes" is optimising for agreement, which defeats
+        the point of a council, so separate wasted motion (machinery proposed
+        ahead of evidence, context re-derived, questions answerable from the
+        repo) from disagreement that simply lost. And measure the proportion of
+        an answer that survived rather than turns-to-convergence: in the design
+        conversation behind this repo the surviving core arrived in turn two and
+        the discarded part was the decoration around it. Output should be a named
+        bias with evidence, which can be written into `AGENTS.md` and inspected,
+        not an optimised prompt string, which can only drift.
+      - Roster suggestion. Not learned routing: twenty councils over five
+        question types is four observations per cell, with an outcome label
+        confounded by ordering, cost and habit. Render the record honestly
+        instead ("six similar councils, you took Opus 5's option three times")
+        and leave the judgement with the user, on the same grounds as having no
+        judge model. The part that does work without learning is quota: agy is
+        the scarce resource, so a suggestion that knows the week's agy use is
+        deterministic and useful.
 - [ ] Secretary session rotation at a round boundary.
 - [ ] Resolve agy's `--effort` versus model-slug precedence by experiment, and
       decide how to surface agy quota use.
