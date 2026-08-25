@@ -11,23 +11,25 @@ council:
   # Which roster `ask` uses when --roster is not given.
   roster: default
 
+  # fable-5 is commented out of the built-in defaults until the account is
+  # upgraded. It works; this is a quota decision. Uncomment to get the
+  # same-brand-different-generation pairing back.
   rosters:
     default:
       - claude:claude-opus-5:high
-      - claude:claude-fable-5:high
+      # - claude:claude-fable-5:high
       - codex:gpt-5.6-sol:high
     # agy appears here and nowhere else: the quota is the scarce resource, so it
     # is spent only when breadth is asked for explicitly. Note that agy bakes the
     # reasoning level into the gemini model slug, so no third field is needed.
     wide:
       - claude:claude-opus-5:high
-      - claude:claude-fable-5:high
       - codex:gpt-5.6-sol:high
       - codex:gpt-5.5:xhigh
       - agy:gemini-3.1-pro-high
       - agy:gemini-3.7-flash-high
     cheap:
-      - claude:claude-fable-5:medium
+      - claude:claude-haiku-4-5-20251001:medium
       - codex:gpt-5.4-mini:medium
 
   # State, not output: safe to wipe. The finished write-up belongs in the vault.

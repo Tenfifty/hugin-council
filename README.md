@@ -235,11 +235,18 @@ council:
   secretary: claude:claude-opus-5:high
   roster: default
   rosters:
-    default: [claude:claude-opus-5:high, claude:claude-fable-5:high, codex:gpt-5.6-sol:high]
-    wide:    [claude:claude-opus-5:high, claude:claude-fable-5:high, codex:gpt-5.6-sol:high,
+    default: [claude:claude-opus-5:high, codex:gpt-5.6-sol:high]
+    wide:    [claude:claude-opus-5:high, codex:gpt-5.6-sol:high,
               codex:gpt-5.5:xhigh, agy:gemini-3.1-pro-high, agy:gemini-3.7-flash-high]
-    cheap:   [claude:claude-fable-5:medium, codex:gpt-5.4-mini:medium]
+    cheap:   [claude:claude-haiku-4-5-20251001:medium, codex:gpt-5.4-mini:medium]
 ```
+
+fable-5 is out of every roster as of 2026-08-25, pending an account upgrade. It
+works, so this is a quota decision and not a capability one, and it is the one
+that costs something: fable next to opus was the same-brand-different-generation
+pairing, which is a different axis of variation from opus next to sol. Until it
+returns, `default` is two voices and `cheap` pairs haiku with mini. The lines are
+commented rather than deleted, in `config.py` and in `config.example.yaml`.
 
 `--roster wide` selects, `--member` appends for a one-off, `--secretary`,
 `--secretary-model` and `--secretary-effort` override the default. A flag and a
@@ -427,7 +434,12 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       (`--no-gather`) and a config key, both removed while it is mandatory,
       because a knob nobody turns is worse than no knob.
 - [x] Broadcast with the status line: who is still thinking, for how long, and who
-      died. Nothing more.
+      died. Nothing more. The members are asked in parallel, so the row is
+      labelled with the letter the synthesis will attribute it to, the clock
+      ticks per member while it thinks, and a footer names who is still out and
+      how long the round has been running. Wall clock, not the sum: a round costs
+      the slowest member. A failure is counted apart from the answers rather than
+      folded into the numerator, which would read as success.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.
 - [x] Mode toggle between council and serial, with the mode shown in the prompt
       itself, plus the second secretary session behind it and the explicit

@@ -22,6 +22,7 @@ from . import archive as arc
 from .config import CouncilConfig
 from .context import WorkContext
 from .status import StatusLine
+from .tui import short_model
 
 PROMPT_DIR = Path(__file__).parent / "prompts"
 
@@ -180,7 +181,9 @@ class Council:
 
         with StatusLine() as status:
             for session in self.members:
-                status.add(session.label)
+                # The same letter and short name the synthesis and the status bar
+                # use, so a slow row is identifiable as "the one that is B".
+                status.add(session.label, f"{anon[session.label]} {short_model(session.model)}")
 
             def run(index: int) -> None:
                 session = self.members[index]

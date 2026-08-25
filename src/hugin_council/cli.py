@@ -21,7 +21,7 @@ from . import context
 from .config import CouncilConfig, load
 from .council import SECRETARY_COUNCIL, SECRETARY_SERIAL, Council
 from .markdown import render
-from .tui import COUNCIL, SERIAL, MemberLine, Shell, Status, ask_prompt
+from .tui import COUNCIL, SERIAL, MemberLine, Shell, Status, ask_prompt, short_model
 
 HELP = """\
 Modes
@@ -87,13 +87,6 @@ def _where(ctx: context.WorkContext) -> str:
     return ctx.primary.name or str(ctx.primary)
 
 
-def _short(model: str) -> str:
-    for prefix in ("claude-", "gemini-"):
-        if model.startswith(prefix):
-            return model[len(prefix):]
-    return model
-
-
 def _status(council: Council, mode: str) -> Status:
     states = council.session_states()
     key = SECRETARY_SERIAL if mode == SERIAL else SECRETARY_COUNCIL
@@ -106,7 +99,7 @@ def _status(council: Council, mode: str) -> Status:
         members.append(
             MemberLine(
                 anon=council.anon_map[session.label],
-                name=_short(session.model),
+                name=short_model(session.model),
                 context=member_usage.context_tokens if member_usage else 0,
                 window=member_usage.context_window if member_usage else None,
                 turns=session.turns,

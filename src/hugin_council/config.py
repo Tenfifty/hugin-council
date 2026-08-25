@@ -15,24 +15,29 @@ from hugin.config import SharedConfig, load_tool
 from hugin.llm import LLMConfig
 
 DEFAULT_SECRETARY = "claude:claude-opus-5:high"
+# fable-5 is out of every roster until the account is upgraded (2026-08-25).
+# It works, so this is a quota decision, not a capability one: put the two
+# commented lines back and delete this comment when the upgrade lands.
 DEFAULT_ROSTERS: dict[str, list[str]] = {
     "default": [
         "claude:claude-opus-5:high",
-        "claude:claude-fable-5:high",
+        # "claude:claude-fable-5:high",
         "codex:gpt-5.6-sol:high",
     ],
     # agy lives here and nowhere else: the quota is the scarce resource, so it
     # gets spent only when breadth is asked for explicitly.
     "wide": [
         "claude:claude-opus-5:high",
-        "claude:claude-fable-5:high",
         "codex:gpt-5.6-sol:high",
         "codex:gpt-5.5:xhigh",
         "agy:gemini-3.1-pro-high",
         "agy:gemini-3.7-flash-high",
     ],
     "cheap": [
-        "claude:claude-fable-5:medium",
+        # haiku takes fable's place as the claude voice here. It is a smaller
+        # model rather than an older one, so the pairing is no longer
+        # same-brand-different-generation; that returns with fable.
+        "claude:claude-haiku-4-5-20251001:medium",
         "codex:gpt-5.4-mini:medium",
     ],
 }

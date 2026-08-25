@@ -39,6 +39,15 @@ WARN = "\x1b[38;5;209m"
 OK = "\x1b[38;5;108m"
 
 
+def short_model(model: str) -> str:
+    """Drop the vendor prefix. `claude-opus-5` is opus-5 everywhere it is shown,
+    because the provider is already visible from the letter and the roster."""
+    for prefix in ("claude-", "gemini-"):
+        if model.startswith(prefix):
+            return model[len(prefix):]
+    return model
+
+
 def humanise(count: int) -> str:
     if count >= 1_000_000:
         return f"{count / 1_000_000:.1f}M"
