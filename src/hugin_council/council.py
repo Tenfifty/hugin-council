@@ -302,6 +302,30 @@ class Council:
             (existing + f"\n{outcome.strip()}\n" if existing else outcome.strip() + "\n"),
         )
 
+    # ------------------------------------------------------------------ numbers
+
+    def session_states(self) -> dict[str, dict]:
+        """Persisted per-session counts, for the status bar.
+
+        Read from the archive rather than from live objects because the
+        secretary's two sessions are created per job and not held open.
+        """
+        return dict(self.archive.sessions())
+
+    def calls_by_provider(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for state in self.session_states().values():
+            provider = str(state.get("provider") or "?")
+            counts[provider] = counts.get(provider, 0) + int(state.get("turns") or 0)
+        return counts
+
+    def total_cost_usd(self) -> float:
+        """Partial by construction: only claude reports a per-turn cost."""
+        return sum(
+            float(state.get("total_cost_usd") or 0.0)
+            for state in self.session_states().values()
+        )
+
     @property
     def dismissed(self) -> bool:
         return bool(self.archive.state.get("dismissed"))

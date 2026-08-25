@@ -292,3 +292,19 @@ class CouncilFlowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SoloEdgeTests(unittest.TestCase):
+    def test_promoted_text_left_pending_at_solo_is_still_on_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = arc.Archive.create(Path(tmp), "q")
+            council = Council(
+                cfg=a_config(),
+                ctx=context.resolve(a_config(hugin_dirs=[Path(tmp)]), Path(tmp)),
+                archive=archive,
+            )
+            council.promote("never sent")
+            council.solo("done")
+            # solo does not consume it; the CLI warns instead, so nothing is
+            # silently dropped from the archive.
+            self.assertEqual(archive.state["promoted"], ["never sent"])

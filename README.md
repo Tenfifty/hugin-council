@@ -51,6 +51,15 @@ serial>  ...            the secretary only; never reaches the members
 /brief  /map  /status   print the brief, the latest synthesis, the roster
 ```
 
+The status bar under the prompt carries the mode, the council slug, the primary
+context directory, the round count, the active secretary session's context use
+against its window, and what can honestly be called quota: claude's reported
+cost plus a call count per provider, with agy coloured because its quota is the
+scarce one. The second line is one compact cell per member: letter, model,
+context against window, turns. A member that has not answered yet shows a dash
+rather than a fake zero, and a provider that does not report a context window
+shows the count without a denominator.
+
 Config is `~/.config/hugin/council.yaml` over `~/.config/hugin/hugin.yaml`; see
 `config.example.yaml`. It runs with no `council.yaml` at all, since the built-in
 defaults carry the same rosters.

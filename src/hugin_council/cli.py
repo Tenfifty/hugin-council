@@ -14,17 +14,18 @@ import argparse
 import sys
 from pathlib import Path
 
-from hugin.session import SessionError
+from hugin.session import SessionError, Usage
 
 from . import archive as arc
 from . import context
 from .config import CouncilConfig, load
-from .council import Council
-
-COUNCIL, SERIAL = "council", "serial"
+from .council import SECRETARY_COUNCIL, SECRETARY_SERIAL, Council
+from .markdown import render
+from .tui import COUNCIL, SERIAL, MemberLine, Shell, Status
 
 HELP = """\
 Modes
+  Tab                 switch between council and serial
   /council, /c        talk to the members (broadcast, then synthesis)
   /serial, /s         talk to the secretary only; never reaches the members
   > <text>            one-shot to the secretary without leaving council mode
@@ -60,27 +61,82 @@ def _build(cfg: CouncilConfig, archive: arc.Archive, args: argparse.Namespace) -
     return council
 
 
+def _colour() -> bool:
+    return sys.stdout.isatty()
+
+
+def _show(body: str) -> None:
+    print(render(body.rstrip(), colour=_colour()))
+
+
 def _print_block(title: str, body: str | None) -> None:
     if not body:
         print(f"(no {title} yet)")
         return
-    print(f"\n=== {title} ===\n")
-    print(body.rstrip())
+    print()
+    _show(body)
     print()
 
 
+def _short(model: str) -> str:
+    for prefix in ("claude-", "gemini-"):
+        if model.startswith(prefix):
+            return model[len(prefix):]
+    return model
+
+
+def _status(council: Council, mode: str) -> Status:
+    states = council.session_states()
+    key = SECRETARY_SERIAL if mode == SERIAL else SECRETARY_COUNCIL
+    active = states.get(key) or states.get(SECRETARY_COUNCIL) or {}
+    usage = Usage.from_dict(active["last_usage"]) if active.get("last_usage") else None
+
+    members = []
+    for session in council.members:
+        member_usage = session.last_usage
+        members.append(
+            MemberLine(
+                anon=council.anon_map[session.label],
+                name=_short(session.model),
+                context=member_usage.context_tokens if member_usage else 0,
+                window=member_usage.context_window if member_usage else None,
+                turns=session.turns,
+            )
+        )
+    return Status(
+        mode=mode,
+        slug=council.archive.slug,
+        where=council.ctx.primary.name or str(council.ctx.primary),
+        rounds=council.archive.rounds,
+        secretary_context=usage.context_tokens if usage else 0,
+        secretary_window=usage.context_window if usage else None,
+        cost_usd=council.total_cost_usd(),
+        calls=council.calls_by_provider(),
+        members=members,
+        dismissed=council.dismissed,
+    )
+
+
 def _loop(council: Council) -> int:
-    mode = SERIAL if council.dismissed else COUNCIL
     if council.dismissed:
         print("This council was adjourned; continuing in serial.")
-    print(f"{council.archive.slug}  ({len(council.members)} members)   /help for commands")
+    print(f"{council.archive.slug}  ({len(council.members)} members)   Tab switches mode, /help")
+
+    def toggle(current: str) -> str:
+        if council.dismissed:
+            return SERIAL
+        return SERIAL if current == COUNCIL else COUNCIL
+
+    shell = Shell(status=lambda mode: _status(council, mode), toggle=toggle)
+    shell.mode = SERIAL if council.dismissed else COUNCIL
 
     while True:
         try:
-            line = input(f"\n{mode}> ").strip()
+            line = shell.prompt().strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return 0
+        mode = shell.mode
         if not line:
             continue
 
@@ -93,10 +149,10 @@ def _loop(council: Council) -> int:
             if council.dismissed:
                 print("The members were dismissed. Start a new council.")
                 continue
-            mode = COUNCIL
+            shell.mode = COUNCIL
             continue
         if line in ("/serial", "/s"):
-            mode = SERIAL
+            shell.mode = SERIAL
             continue
         if line == "/status":
             print(f"  archive:   {council.archive.root}")
@@ -132,8 +188,13 @@ def _loop(council: Council) -> int:
             if not outcome:
                 print("  nothing recorded, council left open")
                 continue
+            pending = council.archive.state.get("promoted") or []
+            if pending:
+                # Otherwise the promoted text is orphaned in silence: the
+                # members it was meant for are about to be dismissed.
+                print(f"  note: {len(pending)} promoted item(s) will never be broadcast")
             council.solo(outcome)
-            mode = SERIAL
+            shell.mode = SERIAL
             print("  members dismissed, outcome recorded, continuing in serial")
             continue
         if line.startswith("/"):
@@ -146,9 +207,9 @@ def _loop(council: Council) -> int:
         try:
             if target == SERIAL:
                 print()
-                print(council.serial(text))
+                _show(council.serial(text))
             else:
-                print(council.round(text))
+                _show(council.round(text))
         except SessionError as exc:
             print(f"  failed: {exc}", file=sys.stderr)
     return 0
@@ -172,7 +233,7 @@ def _cmd_ask(cfg: CouncilConfig, args: argparse.Namespace) -> int:
             print(f"  gathering failed: {exc}", file=sys.stderr)
             print("  continuing without a brief")
     try:
-        print(council.round(question))
+        _show(council.round(question))
     except SessionError as exc:
         print(f"  first round failed: {exc}", file=sys.stderr)
         return 1

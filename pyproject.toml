@@ -12,6 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "David Fendrich" }]
 dependencies = [
     "hugin>=0.1.0",
+    "prompt_toolkit>=3.0",
     "pyyaml>=6.0",
 ]
 
