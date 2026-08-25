@@ -232,26 +232,23 @@ map is sent with an explicit instruction not to revise a position in order to
 match the others, and that a disagreement will be recorded as an objection
 rather than resolved.
 
-**v1 keeps items but drops relations.** The mandatory triple per item stays: id,
-claim, contributors. `excludes` / `requires` / `refines` / `objects-to` /
-`reframes` wait, because that is the part most likely to come back as invented
-structure, and grouping on contribution overlap is a good enough rendering to
-start from. The three mandatory fields each survive for their own reason: stable
-ids are what let a turn be broadcast verbatim, contributors are what `stats`
-measures, and the claim is the map.
+**v1 has no data structure at all.** Not paths, not items, not typed relations:
+the synthesis is markdown and nothing else. Every field that was drafted here was
+a guess about output that has never once been produced. The archive is what makes
+that safe, and stable option numbering is what makes it usable, so those are the
+two things v1 does insist on.
 
-Keep the attribution in v1 even though v1 does not diff. With attribution in
-place the diff is a filter over items rather than a second free-text pass, which
-is the difference between nearly free and genuinely expensive.
-
-**v1 measures its own need.** `stats` already counts items unique to each
-member, which is exactly the signal for convergence. Two upgrades, two separate
+**v1 measures its own need**, but by reading rather than by counting. Ten or
+twenty councils in the archive answer three questions that no amount of design
+could: whether the full map causes members to stop contributing anything of
+their own, whether the synthesis gets unreadable as options accumulate, and what
+a data structure would have to hold if one is wanted. Two upgrades, two separate
 triggers, not to be bundled:
 
 | Symptom | Upgrade |
 |---------|---------|
-| items unique to a member fall towards zero after round 1 | the diff, or harder framing first |
-| the map gets hard to read as items accumulate | relations |
+| a member stops saying anything the others did not | a per-member diff, or harder framing first |
+| the synthesis gets hard to read as options accumulate | some structure, informed by the archive |
 
 ## Rejected, with reasons
 
@@ -267,7 +264,8 @@ So these do not get re-argued:
 - **A stateless secretary.** Considered, then dropped: context continuity helps
   the jobs it actually does, and the "nobody owns the conversation" principle was
   about opinions, which the secretary has none of.
-- **Rewriting the user's turn per member.** Made unnecessary by stable path ids.
+- **Rewriting the user's turn per member.** Made unnecessary by stable option
+  numbering in the synthesis.
 - **The `gemini` binary as the third voice.** `agy` replaced it in the stack, and
   it resumes on a stable id where `gemini --resume` takes a positional index.
 
@@ -288,10 +286,8 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
 - [x] `hugin.session.Session`: persistent multi-turn sessions for codex, claude
       and agy, resumed by id, with normalised usage. On branch
       `session-abstraction` in `~/projs/hugin`.
-- [x] Diff design settled enough to build around: deferred out of v1 in favour
-      of the full map plus independence framing, and specified as a filter over
-      item attribution rather than a second free-text pass, so it stays cheap
-      when it does arrive. See "Scope of v1".
+- [x] Diff deferred out of v1, in favour of the full map plus independence
+      framing. See "Scope of v1".
 - [ ] Synthesis prompt. Free-text markdown, and the only hard formatting rule is
       stable numbering of the options so a turn can be broadcast verbatim. Plus
       the constraint that the secretary may classify and compress but not resolve
