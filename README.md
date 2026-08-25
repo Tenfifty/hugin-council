@@ -18,7 +18,7 @@ worth having.
 
 | Phase | Who | What |
 |-------|-----|------|
-| 1 (optional) | secretary | Gather: find relevant vault files, past conversations, web sources. Summarise and link. No analysis, no conclusions. |
+| 1 (optional) | secretary | Gather: find relevant vault files, past conversations, web sources. Pointers, quotes and plain facts, each with its source. No analysis, no conclusions, no resolving contradictions. |
 | 2 | members | Same question and same background to each, in parallel. Each knows it is part of a council and what that means. May look up more on its own. |
 | 2b | secretary | Synthesis: fold the answers into the map. |
 | 3 | secretary | `solo`: dismiss the members, keep the secretary, switch it to general assistant with its context intact. |
@@ -302,11 +302,41 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       hugin directories. Anywhere else, the hugin vault is the default, with the
       current directory available as a weak hint for finding files the question
       refers to.
-- [ ] Phase 1 gatherer. Writes pointers, not prose: path or URL, a paragraph on
-      what the source says, a line on why it is relevant. Plus a short list of
-      what it looked at and **rejected**, so a member can pull a thread the
-      secretary dropped. That list is what makes one model's relevance judgement
-      an acceptable price.
+- [ ] Phase 1 gatherer. Per source: path or URL, what it says, a line on why it
+      is relevant. Plus a short list of what it looked at and **rejected**, so a
+      member can pull a thread the secretary dropped. That list is what makes one
+      model's relevance judgement an acceptable price.
+
+      It may extract plain facts, not only point at them, because pointers alone
+      mean three members repeat the same lookup, which is what phase 1 exists to
+      prevent. The line is not fact versus opinion, which is a phrase that
+      stretches: it is **verifiable against the source without judgement**.
+      Allowed are verbatim quotes, numbers, dates, versions, paths, command
+      output, and "source X says Y" attributed to the source even where the claim
+      is contested. Not allowed are ranking credibility, reconciling
+      contradictions, implications, "this suggests", or filling gaps by
+      inference.
+
+      Three rules follow:
+
+      - **Contradictions are preserved, not resolved.** If the vault says one
+        thing and a repo another, report both, attributed. That they disagree is
+        itself a fact, and settling it is the analysis that belongs to the
+        members. Note the symmetry: the secretary's constant across every phase
+        is *may not resolve*. Phase 1 gathers without reconciling, phase 2b
+        synthesises without deciding. One rule, two phases, and phase 3 is where
+        it is lifted, which is exactly why that inversion is the risky part.
+      - **Every fact carries its source inline**, or the brief becomes a layer of
+        unsourced assertions that read as authoritative. This is where the real
+        risk sits: an error in the brief is **correlated across all members**. A
+        member's own mistake gets caught by the others; the brief's mistake gets
+        caught by nobody and shows up in three answers at once. Correlated error
+        is the worst failure mode a council has, so extraction stays sparse and
+        always cited.
+      - **Date the extraction.** Vault prose goes stale, and the `gws` entry in
+        `AGENTS.md` is that exact failure. An extracted fact is "the document says
+        X as of this date", not "X". And quote verbatim for anything load-bearing:
+        a paraphrase of a number is a bug.
 - [ ] Broadcast with the status line: who is still thinking, for how long, and who
       died. Nothing more.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.
