@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
+from hugin_council import tui
 from hugin_council.tui import (
     COUNCIL,
     MODE_COUNCIL,
@@ -111,6 +113,15 @@ class ShellTests(unittest.TestCase):
         shell.mode = shell.toggle(shell.mode)
         self.assertEqual(shell.mode, SERIAL)
         self.assertEqual(calls, [COUNCIL])
+
+
+class AskPromptTests(unittest.TestCase):
+    def test_falls_back_to_input_off_a_terminal(self) -> None:
+        with patch.object(tui.sys, "stdin") as stdin:
+            stdin.isatty.return_value = False
+            with patch("builtins.input", return_value="  why is this slow?  ") as read:
+                self.assertEqual(tui.ask_prompt("hugin").strip(), "why is this slow?")
+        self.assertIn("ask", read.call_args.args[0])
 
 
 if __name__ == "__main__":

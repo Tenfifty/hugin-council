@@ -18,7 +18,7 @@ worth having.
 
 | Phase | Who | What |
 |-------|-----|------|
-| 1 (optional) | secretary | Gather: find relevant vault files, past conversations, web sources. Pointers, quotes and plain facts, each with its source. No analysis, no conclusions, no resolving contradictions. |
+| 1 (always) | secretary | Gather: find relevant vault files, past conversations, web sources. Pointers, quotes and plain facts, each with its source. No analysis, no conclusions, no resolving contradictions. Told the material may not exist: an empty brief that says where it looked is a valid outcome. |
 | 2 | members | Same question and same background to each, in parallel. Each knows it is part of a council and what that means. May look up more on its own. |
 | 2b | secretary | Synthesis: fold the answers into the map. |
 | serial (any time) | secretary | Tab out of the council to ask the secretary something or to do work with side effects. Never enters the council context. |
@@ -29,15 +29,20 @@ Rounds repeat 2 and 2b. Your turn goes to every member verbatim.
 ## Using it
 
 ```bash
-hugin-council ask "how should I do this?"        # new council, phase 1 then round 1
-hugin-council ask "..." --roster wide            # spend the agy quota
-hugin-council ask "..." --no-gather              # skip phase 1
-hugin-council ask "..." --member agy:gemini-3.1-pro-high   # append one for this run
-hugin-council ask "..." --secretary codex:gpt-5.6-sol --secretary-effort xhigh
+hugin-council                                    # the normal way in: ask mode, type the question
+hugin-council --roster wide                      # ask mode, spending the agy quota
+hugin-council --member agy:gemini-3.1-pro-high   # append one member for this run
+hugin-council --secretary codex:gpt-5.6-sol --secretary-effort xhigh
 hugin-council resume                             # latest council
 hugin-council resume 2026-08-25-some-question
 hugin-council list
+hugin-council "how should I do this?"            # question on argv, for scripts
 ```
+
+Bare invocation means `ask`. The first question is typed into the TUI rather
+than passed on the command line, so starting a council is one keystroke and the
+question gets the same line editing as every later turn. Phase 1 then runs
+before the members see anything.
 
 Inside a council:
 
@@ -407,6 +412,20 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
         `AGENTS.md` is that exact failure. An extracted fact is "the document says
         X as of this date", not "X". And quote verbatim for anything load-bearing:
         a paraphrase of a number is a bug.
+
+      Phase 1 is **mandatory for now**, and the prompt says so with the honest
+      caveat attached: the material may not exist. Nothing guarantees the vault
+      has prior art, that the repo underfoot is relevant, or that the web has
+      anything. So an empty brief is a first-class answer — where it looked,
+      which searches, which URLs, and the statement that none of it bears on the
+      question. That is worth a round trip, because it tells the members the
+      ground is empty and stops three of them searching it again. The failure
+      mode being designed against is a stretched connection, which is correlated
+      error wearing a citation.
+- [ ] Reconsider whether phase 1 should be skippable, once there is evidence of
+      it being a waste rather than a guess that it might be. It was a flag
+      (`--no-gather`) and a config key, both removed while it is mandatory,
+      because a knob nobody turns is worse than no knob.
 - [x] Broadcast with the status line: who is still thinking, for how long, and who
       died. Nothing more.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.

@@ -49,6 +49,20 @@ Three rules:
    <date>", not "X". Quote verbatim for anything load-bearing; a paraphrase of a
    number is a bug.
 
+## There may be nothing to find
+
+Do not assume the material exists. The question may have no prior art in the
+vault, nothing relevant in the repo you are standing in, and nothing useful on
+the web. A stretched connection is worse than an empty brief: a member would
+have caught its own bad source, but yours reaches all of them at once and none
+of them can see where it came from.
+
+So if you find nothing that bears on the question, say that. List where you
+looked — which directories, which searches, which URLs — and state plainly that
+nothing there is relevant. That is a complete brief and a useful one: it tells
+the members the ground is empty, which is itself worth knowing, and it stops
+them repeating the same fruitless search three times.
+
 End with a short section headed `## Looked at and set aside`, listing what you
 examined and did not include, one line each with the reason. A member may want
 to pull a thread you dropped, and that list is what makes your relevance

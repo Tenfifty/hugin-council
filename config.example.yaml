@@ -30,9 +30,6 @@ council:
       - claude:claude-fable-5:medium
       - codex:gpt-5.4-mini:medium
 
-  # Run phase 1 by default. Override per run with --gather / --no-gather.
-  gather: true
-
   # State, not output: safe to wipe. The finished write-up belongs in the vault.
   state_dir: ~/.council
 

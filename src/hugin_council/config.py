@@ -53,7 +53,6 @@ class CouncilConfig(SharedConfig):
     # The general Hugin directories, always in reach. Defaults to the vault,
     # which is where AGENTS.md and instructions/ live.
     hugin_dirs: list[Path] = field(default_factory=list)
-    gather: bool = True
     turn_timeout: int = 1800
     llm: LLMConfig = field(default_factory=LLMConfig)
     gather_prompt_path: Path | None = None
@@ -112,7 +111,6 @@ def build(merged: dict[str, Any]) -> CouncilConfig:
             Path(projects_root).expanduser() if projects_root else CouncilConfig.projects_root
         ),
         hugin_dirs=hugin_dirs,
-        gather=bool(data.get("gather", True)),
         turn_timeout=int(data.get("turn_timeout") or 1800),
         llm=LLMConfig.from_dict(merged.get("llm") or {}),
         gather_prompt_path=_opt(data.get("gather_prompt_path")),

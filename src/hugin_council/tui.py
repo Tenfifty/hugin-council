@@ -26,12 +26,13 @@ try:  # prompt_toolkit is a soft dependency
 except ImportError:  # pragma: no cover - exercised only where it is absent
     HAVE_PT = False
 
-COUNCIL, SERIAL = "council", "serial"
+COUNCIL, SERIAL, ASK = "council", "serial", "ask"
 
 RESET = "\x1b[0m"
 BAR = "\x1b[48;5;236m"
 MODE_COUNCIL = "\x1b[1;38;5;39m"
 MODE_SERIAL = "\x1b[1;38;5;215m"
+MODE_ASK = "\x1b[1;38;5;150m"
 KEY = "\x1b[38;5;245m"
 VALUE = "\x1b[38;5;252m"
 WARN = "\x1b[38;5;209m"
@@ -153,3 +154,22 @@ class Shell:
             bottom_toolbar=lambda: ANSI(self.status(self.mode).render()),
             refresh_interval=1.0,
         )
+
+
+def ask_prompt(where: str) -> str:
+    """Read the first question.
+
+    It is typed here rather than passed on the command line, so that starting a
+    council is one keystroke and the question gets the same line editing as
+    every later turn. There is no council yet, so the bar can only show the mode
+    and where we are: no slug, no rounds, no usage.
+    """
+    text = f"\n{MODE_ASK}{ASK}{RESET}> "
+    if not (HAVE_PT and sys.stdin.isatty()):
+        return input(f"\n{ASK}> ")
+    bar = (
+        f"{BAR} {MODE_ASK}ASK{RESET} "
+        f"{KEY}\u00b7{RESET} {VALUE}{where}{RESET} "
+        f"{KEY}\u00b7{RESET} {KEY}the secretary gathers first, then the members answer{RESET}"
+    )
+    return PromptSession().prompt(ANSI(text), bottom_toolbar=lambda: ANSI(f"{BAR}{bar}{RESET}"))

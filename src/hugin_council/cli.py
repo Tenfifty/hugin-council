@@ -21,7 +21,7 @@ from . import context
 from .config import CouncilConfig, load
 from .council import SECRETARY_COUNCIL, SECRETARY_SERIAL, Council
 from .markdown import render
-from .tui import COUNCIL, SERIAL, MemberLine, Shell, Status
+from .tui import COUNCIL, SERIAL, MemberLine, Shell, Status, ask_prompt
 
 HELP = """\
 Modes
@@ -53,8 +53,13 @@ def _resolve(cfg: CouncilConfig, args: argparse.Namespace) -> tuple[list[str], s
     return specs, secretary
 
 
-def _build(cfg: CouncilConfig, archive: arc.Archive, args: argparse.Namespace) -> Council:
-    ctx = context.resolve(cfg, Path.cwd())
+def _build(
+    cfg: CouncilConfig,
+    archive: arc.Archive,
+    args: argparse.Namespace,
+    ctx: context.WorkContext | None = None,
+) -> Council:
+    ctx = ctx or context.resolve(cfg, Path.cwd())
     council = Council(cfg=cfg, ctx=ctx, archive=archive, on_note=lambda t: print(f"  ({t})"))
     specs, secretary = _resolve(cfg, args)
     council.attach(specs, secretary)
@@ -76,6 +81,10 @@ def _print_block(title: str, body: str | None) -> None:
     print()
     _show(body)
     print()
+
+
+def _where(ctx: context.WorkContext) -> str:
+    return ctx.primary.name or str(ctx.primary)
 
 
 def _short(model: str) -> str:
@@ -106,7 +115,7 @@ def _status(council: Council, mode: str) -> Status:
     return Status(
         mode=mode,
         slug=council.archive.slug,
-        where=council.ctx.primary.name or str(council.ctx.primary),
+        where=_where(council.ctx),
         rounds=council.archive.rounds,
         secretary_context=usage.context_tokens if usage else 0,
         secretary_window=usage.context_window if usage else None,
@@ -216,22 +225,30 @@ def _loop(council: Council) -> int:
 
 
 def _cmd_ask(cfg: CouncilConfig, args: argparse.Namespace) -> int:
-    question = " ".join(args.question).strip()
+    ctx = context.resolve(cfg, Path.cwd())
+    question = " ".join(args.question or []).strip()
+    if not question:
+        try:
+            question = ask_prompt(_where(ctx)).strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
     if not question:
         print("nothing to ask", file=sys.stderr)
         return 2
     archive = arc.Archive.create(cfg.state_dir, question)
-    council = _build(cfg, archive, args)
+    council = _build(cfg, archive, args, ctx)
     print(f"council {archive.slug}")
     print(f"  {council.ctx.describe()}\n")
 
-    want_gather = cfg.gather if args.gather is None else args.gather
-    if want_gather:
-        try:
-            council.gather()
-        except SessionError as exc:
-            print(f"  gathering failed: {exc}", file=sys.stderr)
-            print("  continuing without a brief")
+    # Phase 1 always runs. The prompt tells the secretary the material may not
+    # exist, so an empty brief that says where it looked is a valid outcome; a
+    # failure is not, and is reported rather than swallowed.
+    try:
+        council.gather()
+    except SessionError as exc:
+        print(f"  gathering failed: {exc}", file=sys.stderr)
+        print("  continuing without a brief")
     try:
         _show(council.round(question))
     except SessionError as exc:
@@ -268,6 +285,31 @@ def _cmd_list(cfg: CouncilConfig, args: argparse.Namespace) -> int:
     return 0
 
 
+def _normalise(argv: list[str]) -> list[str]:
+    """Insert the implicit ``ask``.
+
+    Starting a council is what the tool is for, so bare ``hugin-council`` means
+    ``ask`` and the TUI reads the question. A question given on the command line
+    still works, at the cost of one ambiguity: one opening with a subcommand
+    word ("list the trade-offs of ...") would be parsed as that subcommand, so a
+    leading word only counts as one when what follows it fits — ``list`` takes
+    nothing, ``resume`` takes at most a slug.
+    """
+    if argv and argv[0] in ("-h", "--help"):
+        return argv
+    if not argv or argv[0].startswith("-"):
+        return ["ask", *argv]
+    head, rest = argv[0], argv[1:]
+    positional = [a for a in rest if not a.startswith("-")]
+    if head == "ask":
+        return argv
+    if head == "list" and not positional:
+        return argv
+    if head == "resume" and len(positional) <= 1:
+        return argv
+    return ["ask", *argv]
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hugin-council",
@@ -287,11 +329,8 @@ def _parser() -> argparse.ArgumentParser:
         p.add_argument("--secretary-model")
         p.add_argument("--secretary-effort", choices=("low", "medium", "high", "xhigh", "max"))
 
-    ask = sub.add_parser("ask", help="start a new council")
-    ask.add_argument("question", nargs="+")
-    gather = ask.add_mutually_exclusive_group()
-    gather.add_argument("--gather", dest="gather", action="store_true", default=None)
-    gather.add_argument("--no-gather", dest="gather", action="store_false")
+    ask = sub.add_parser("ask", help="start a new council (the default)")
+    ask.add_argument("question", nargs="*", help="optional; asked in the TUI if omitted")
     add_roster_flags(ask)
     ask.set_defaults(func=_cmd_ask)
 
@@ -307,11 +346,8 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
-    args = parser.parse_args(argv)
-    if not getattr(args, "command", None):
-        parser.print_help()
-        return 0
-    for attr in ("roster", "member", "secretary", "secretary_model", "secretary_effort", "gather"):
+    args = parser.parse_args(_normalise(list(argv if argv is not None else sys.argv[1:])))
+    for attr in ("question", "roster", "member", "secretary", "secretary_model", "secretary_effort"):
         if not hasattr(args, attr):
             setattr(args, attr, None)
     try:
