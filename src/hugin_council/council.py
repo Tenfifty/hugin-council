@@ -183,7 +183,10 @@ class Council:
             for session in self.members:
                 # The same letter and short name the synthesis and the status bar
                 # use, so a slow row is identifiable as "the one that is B".
-                status.add(session.label, f"{anon[session.label]} {short_model(session.model)}")
+                # Just the letter: "Participant A" is how the synthesis addresses
+                # it, but the row wants the narrow form the status bar uses.
+                letter = anon[session.label][-1]
+                status.add(session.label, f"{letter} {short_model(session.model)}")
 
             def run(index: int) -> None:
                 session = self.members[index]
@@ -235,8 +238,12 @@ class Council:
             ),
         )
         (round_dir / arc.SECRETARY_PROMPT).write_text(prompt, encoding="utf-8")
-
         secretary = self._session(self.secretary_spec, read_only=False, key=SECRETARY_COUNCIL)
+        if self.cfg.synthesis_effort:
+            # Set here rather than in the spec, so an existing council picks up a
+            # changed config, and so gathering keeps the secretary's own effort.
+            # The switch costs one re-read of this session; see config.py.
+            secretary.effort = self.cfg.synthesis_effort
         with StatusLine() as status:
             status.start("synthesising")
             try:

@@ -32,6 +32,14 @@ council:
       - claude:claude-haiku-4-5-20251001:medium
       - codex:gpt-5.4-mini:medium
 
+  # Effort for phase 2b only, since folding answers together is lighter work
+  # than producing them. Effort is part of the server-side prompt cache key for
+  # both claude and codex (measured 2026-08-25), so stepping down costs one full
+  # re-read of the secretary's conversation and every synthesis after it is
+  # cached again: once per council, not once per round. Empty means "whatever
+  # the secretary spec says".
+  synthesis_effort: medium
+
   # State, not output: safe to wipe. The finished write-up belongs in the vault.
   state_dir: ~/.council
 

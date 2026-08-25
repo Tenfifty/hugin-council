@@ -42,6 +42,13 @@ DEFAULT_ROSTERS: dict[str, list[str]] = {
     ],
 }
 LANGUAGE_NAMES = {"sv": "Swedish", "en": "English"}
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+# Synthesis is clustering and compression, not the hard reasoning; the hard
+# reasoning is the members'. Measured 2026-08-25: effort is part of the
+# server-side cache key for both claude and codex, so the step down costs one
+# full re-read of the secretary's conversation and every synthesis after it hits
+# the cache again. Once per council, not once per round. Set to "high" to undo.
+DEFAULT_SYNTHESIS_EFFORT = "medium"
 
 
 @dataclass
@@ -58,6 +65,8 @@ class CouncilConfig(SharedConfig):
     # The general Hugin directories, always in reach. Defaults to the vault,
     # which is where AGENTS.md and instructions/ live.
     hugin_dirs: list[Path] = field(default_factory=list)
+    # Effort for phase 2b only. None means "whatever the secretary spec says".
+    synthesis_effort: str | None = DEFAULT_SYNTHESIS_EFFORT
     turn_timeout: int = 1800
     llm: LLMConfig = field(default_factory=LLMConfig)
     gather_prompt_path: Path | None = None
@@ -116,6 +125,7 @@ def build(merged: dict[str, Any]) -> CouncilConfig:
             Path(projects_root).expanduser() if projects_root else CouncilConfig.projects_root
         ),
         hugin_dirs=hugin_dirs,
+        synthesis_effort=_effort(data.get("synthesis_effort", DEFAULT_SYNTHESIS_EFFORT)),
         turn_timeout=int(data.get("turn_timeout") or 1800),
         llm=LLMConfig.from_dict(merged.get("llm") or {}),
         gather_prompt_path=_opt(data.get("gather_prompt_path")),
@@ -123,6 +133,15 @@ def build(merged: dict[str, Any]) -> CouncilConfig:
         synthesis_prompt_path=_opt(data.get("synthesis_prompt_path")),
         serial_prompt_path=_opt(data.get("serial_prompt_path")),
     )
+
+
+def _effort(value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    effort = str(value).lower()
+    if effort not in EFFORTS:
+        raise ValueError(f"synthesis_effort must be one of: {', '.join(EFFORTS)}")
+    return effort
 
 
 def _opt(value: Any) -> Path | None:

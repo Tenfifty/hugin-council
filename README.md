@@ -289,6 +289,35 @@ expect misses on slow rounds. This is identical for every transport because the
 cache is server-side, and on subscriptions a miss costs rate-limit budget rather
 than money.
 
+### Effort is part of the cache key, so it is set per role and not per turn
+
+Measured 2026-08-25, four turns on one session at high, high, low, low, with a
+~16k-token prefix:
+
+| Turn | Effort | New input | Cached | |
+|------|--------|-----------|--------|-|
+| 1 | high | 16239 | 16373 | claude, opus-5 |
+| 2 | high | 633 | 32610 | the hit |
+| 3 | low | 16914 | 16373 | the switch: whole conversation re-read |
+| 4 | low | 46 | 33285 | cached again, under the new effort |
+
+codex behaves identically (11592/11008, 346/22272, 11628/11008, 382/22272). agy
+was not measured because for gemini the reasoning level is baked into the model
+slug, so a change there is a different model, which is a harder invalidation
+than this one. Nothing tested tolerates a change for free.
+
+What that means in practice is the opposite of discouraging: the cost is per
+*switch*, not per turn, so effort belongs to a role rather than to a turn. The
+secretary's council session goes gather, synthesise, synthesise, …, so a lower
+synthesis effort costs exactly one re-read, at the first synthesis, and every
+round after it hits the cache. `synthesis_effort` defaults to `medium` against a
+`high` secretary on that basis: folding answers together is clustering and
+compression, and the hard reasoning is the members'. Set it to `high` to undo,
+or empty to inherit the secretary's own.
+
+The pattern to avoid is alternating effort turn by turn on one session, which
+pays the re-read every time.
+
 ### State vs output
 
 Per `CONVENTIONS.md`: council state (map checkpoints, session ids, raw answers)

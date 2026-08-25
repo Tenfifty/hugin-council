@@ -46,6 +46,13 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(build({"language": "sv"}).language_name, "Swedish")
         self.assertEqual(build({}).language_name, "English")
 
+    def test_synthesis_effort_is_validated(self) -> None:
+        self.assertEqual(build({}).synthesis_effort, "medium")
+        self.assertIsNone(build({"council": {"synthesis_effort": None}}).synthesis_effort)
+        self.assertEqual(build({"council": {"synthesis_effort": "HIGH"}}).synthesis_effort, "high")
+        with self.assertRaises(ValueError):
+            build({"council": {"synthesis_effort": "sometimes"}})
+
     def test_unknown_or_empty_roster_is_an_error(self) -> None:
         cfg = build({"council": {"rosters": {"default": ["claude"], "empty": []}}})
         with self.assertRaises(ValueError):
@@ -194,6 +201,23 @@ class CouncilFlowTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
+
+    def test_synthesis_steps_the_effort_down_and_gathering_does_not(self) -> None:
+        self.council.gather()
+        secretary = next(s for s in self.made if s.model == "sec")
+        self.assertIsNone(secretary.effort)  # "claude:sec" carries no effort
+        self.council.round("How should I do this?")
+        self.assertEqual(secretary.effort, self.cfg.synthesis_effort)
+
+    def test_synthesis_effort_none_leaves_the_secretary_alone(self) -> None:
+        self.council.cfg = a_config(
+            hugin_dirs=self.cfg.hugin_dirs,
+            projects_root=self.cfg.projects_root,
+            synthesis_effort=None,
+        )
+        self.council.round("How should I do this?")
+        secretary = next(s for s in self.made if s.model == "sec")
+        self.assertIsNone(secretary.effort)
 
     def test_first_round_asks_for_options_and_archives_every_answer_raw(self) -> None:
         self.council.round("How should I do this?")
