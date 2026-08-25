@@ -27,23 +27,49 @@ Rounds repeat 2 and 2b. Your turn goes to every member verbatim.
 
 ## Decisions
 
-### The map is a data structure, not prose
+### The map is prose. The archive is the structure.
 
-The synthesis is stored as structured data (paths, each with mechanism,
-assumption, cost, who raised it, objections) and *rendered* into prose. Three
-things fall out of that and none of them need extra model calls:
+The synthesis is markdown, written for a human to read. There is no schema, and
+that is deliberate: designing fields for a workflow that has not been run once
+means guessing what these councils actually produce. Ten or twenty real ones are
+better evidence than any amount of upfront design, and a structure can be
+extracted afterwards from an archive that was kept properly.
 
-- **The per-member diff**, if it is ever needed. For member X the diff is the
-  items X is not a contributor to, which is a set operation over the
-  attribution rather than a second model pass. Not in v1: see "Scope of v1"
-  below.
-- **The experiment log.** The map already records who raised what, so
-  `council stats` can report, per member, paths raised, paths unique to it, and
-  how often you picked one of them in phase 3. That last one is the real
-  signal. After fifteen or twenty councils it answers empirically whether Fable
-  5 earns its slot next to Opus 5, or 3.7 Flash next to 3.1 Pro.
-- **Restart.** The map on disk is the checkpoint the whole council can be
-  rebuilt from.
+So the discipline is on the input side, not the output side. **Every member
+answer is archived raw and separate, alongside the exact prompt that was sent.**
+Attribution can be recovered from text later; it cannot be recovered from a
+synthesis that threw the raw answers away. Filenames carry the metadata that
+would otherwise have been fields:
+
+```
+~/.council/<slug>/
+  question.md
+  brief.md                              phase 1, if it ran
+  round-01/
+    prompt-members.md                   exactly what was broadcast
+    answer-claude-opus-5-high.md
+    answer-claude-fable-5-high.md
+    answer-codex-gpt-5.6-sol-high.md
+    prompt-secretary.md
+    synthesis.md
+  round-02/ ...
+  sessions.json
+```
+
+`sessions.json` stays structured, but that is machine state (provider, model,
+effort, session id), not content. Structuring the state is a different thing
+from structuring the synthesis.
+
+Two consequences:
+
+- **Stable ids survive without a schema.** Numbering the options in the
+  synthesis (V1, V2, V3, never reused across rounds) is a prompt convention, not
+  a schema requirement. It is what lets a turn be broadcast verbatim, so it is
+  the one formatting rule the synthesis prompt insists on.
+- **`council stats` is not a feature, it is a later pass** over the archive.
+  Probably better that way: what to count can be decided once it is known what
+  mattered. The question it eventually answers is whether Fable 5 earns its seat
+  next to Opus 5, or 3.7 Flash next to 3.1 Pro.
 
 ### It is organised by path, not by agreement
 
@@ -266,15 +292,15 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       of the full map plus independence framing, and specified as a filter over
       item attribution rather than a second free-text pass, so it stays cheap
       when it does arrive. See "Scope of v1".
-- [ ] Map schema, v1 shape: flat items with `id`, `claim`, `contributors`, no
-      relations. Ids are never reused or reassigned; a later merge creates a new
-      item that supersedes the old ones and the old ids stay resolvable, because
-      "go with P2" has to keep working in round ten. Item granularity: something
-      that can be independently agreed with or rejected, and merge rather than
-      split when in doubt, since failed dedup hands back the same point twice in
-      different words, which is the overlap the tool exists to remove.
-- [ ] One renderer over the map: prose grouped by contribution overlap (all
-      members / some / one). The per-member diff renderer waits for its trigger.
+- [ ] Synthesis prompt. Free-text markdown, and the only hard formatting rule is
+      stable numbering of the options so a turn can be broadcast verbatim. Plus
+      the constraint that the secretary may classify and compress but not resolve
+      a disagreement or invent a middle position nobody proposed.
+- [ ] Archive layout as above, with raw answers kept verbatim. This is the one
+      part that has to be right from the start, because it is what makes a
+      structure extractable later at all.
+- [ ] After 10 to 20 real councils: read the archive and see what a data
+      structure would actually need to hold. Not before.
 - [ ] **cwd-aware context resolution.** The command must run from anywhere. Under
       a `~/projs` subdirectory phase 1 should look at that repo *and* the general
       hugin directories. Anywhere else, the hugin vault is the default, with the
@@ -290,7 +316,8 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
 - [ ] Phase 2b synthesis prompt, with the may-not-resolve constraint.
 - [ ] Phase 3 `solo`, including the restraint-lifting transition turn and
       `--fork`.
-- [ ] `council stats` over the maps.
+- [ ] `council stats` as a postprocessing pass over the archive, once there is
+      an archive worth reading.
 - [ ] Secretary session rotation at a round boundary.
 - [ ] Resolve agy's `--effort` versus model-slug precedence by experiment, and
       decide how to surface agy quota use.
