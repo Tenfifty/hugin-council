@@ -33,10 +33,10 @@ The synthesis is stored as structured data (paths, each with mechanism,
 assumption, cost, who raised it, objections) and *rendered* into prose. Three
 things fall out of that and none of them need extra model calls:
 
-- **The per-member diff.** For member X the diff is the paths X did not raise,
-  plus paths X raised where someone else added a different mechanism or an
-  objection. It is derived, so what you read and what the members receive can
-  never drift apart, and its size does not grow with the number of members.
+- **The per-member diff**, if it is ever needed. For member X the diff is the
+  items X is not a contributor to, which is a set operation over the
+  attribution rather than a second model pass. Not in v1: see "Scope of v1"
+  below.
 - **The experiment log.** The map already records who raised what, so
   `council stats` can report, per member, paths raised, paths unique to it, and
   how often you picked one of them in phase 3. That last one is the real
@@ -188,6 +188,45 @@ Per `CONVENTIONS.md`: council state (map checkpoints, session ids, raw answers)
 goes in `~/.council/` or a configured `state_dir` and is safe to wipe. The
 finished `.md` goes in the vault. Never mixed.
 
+## Scope of v1
+
+Start simple and let the tool tell us what it needs.
+
+**v1 sends the full map to every member each round**, with no diff. The
+argument for a diff was partly that it saves context, and that argument is weak
+here: three answers of 500 to 1500 tokens make a synthesis of roughly 3k per
+round, so ten rounds is ~30k against a 200k to 1M window. A single agentic turn
+that reads four files costs more. Context is not the constraint in discussion
+work the way it is in programming and verification.
+
+The argument that survives is **preserving independence**, which no token count
+shows and which quietly degrades the whole point of paying three models. Most of
+that is available from framing rather than from diffing, and framing is free: the
+map is sent with an explicit instruction not to revise a position in order to
+match the others, and that a disagreement will be recorded as an objection
+rather than resolved.
+
+**v1 keeps items but drops relations.** The mandatory triple per item stays: id,
+claim, contributors. `excludes` / `requires` / `refines` / `objects-to` /
+`reframes` wait, because that is the part most likely to come back as invented
+structure, and grouping on contribution overlap is a good enough rendering to
+start from. The three mandatory fields each survive for their own reason: stable
+ids are what let a turn be broadcast verbatim, contributors are what `stats`
+measures, and the claim is the map.
+
+Keep the attribution in v1 even though v1 does not diff. With attribution in
+place the diff is a filter over items rather than a second free-text pass, which
+is the difference between nearly free and genuinely expensive.
+
+**v1 measures its own need.** `stats` already counts items unique to each
+member, which is exactly the signal for convergence. Two upgrades, two separate
+triggers, not to be bundled:
+
+| Symptom | Upgrade |
+|---------|---------|
+| items unique to a member fall towards zero after round 1 | the diff, or harder framing first |
+| the map gets hard to read as items accumulate | relations |
+
 ## Rejected, with reasons
 
 So these do not get re-argued:
@@ -223,14 +262,19 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
 - [x] `hugin.session.Session`: persistent multi-turn sessions for codex, claude
       and agy, resumed by id, with normalised usage. On branch
       `session-abstraction` in `~/projs/hugin`.
-- [ ] **Spec the diff properly.** The hardest remaining design question and the
-      one everything else waits on. It has to stay general: sometimes the
-      answers really are separable tracks, often they are not, and a format that
-      assumes clean paths will mangle the cases that have none. Degrading
-      gracefully towards "here is what else came up" matters more than a tidy
-      schema.
-- [ ] Map schema, plus the two renderers over it (prose for the human, per-member
-      diff for the members).
+- [x] Diff design settled enough to build around: deferred out of v1 in favour
+      of the full map plus independence framing, and specified as a filter over
+      item attribution rather than a second free-text pass, so it stays cheap
+      when it does arrive. See "Scope of v1".
+- [ ] Map schema, v1 shape: flat items with `id`, `claim`, `contributors`, no
+      relations. Ids are never reused or reassigned; a later merge creates a new
+      item that supersedes the old ones and the old ids stay resolvable, because
+      "go with P2" has to keep working in round ten. Item granularity: something
+      that can be independently agreed with or rejected, and merge rather than
+      split when in doubt, since failed dedup hands back the same point twice in
+      different words, which is the overlap the tool exists to remove.
+- [ ] One renderer over the map: prose grouped by contribution overlap (all
+      members / some / one). The per-member diff renderer waits for its trigger.
 - [ ] **cwd-aware context resolution.** The command must run from anywhere. Under
       a `~/projs` subdirectory phase 1 should look at that repo *and* the general
       hugin directories. Anywhere else, the hugin vault is the default, with the
