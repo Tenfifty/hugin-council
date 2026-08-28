@@ -49,6 +49,22 @@ Three rules:
    <date>", not "X". Quote verbatim for anything load-bearing; a paraphrase of a
    number is a bug.
 
+## You are on a budget
+
+One sweep, breadth before depth. Aim for **ten to fifteen tool calls** and stop
+there. You are saving the members their first ten minutes, not doing the
+research: they can read, search and pull threads themselves, and they will.
+
+The first version of this prompt had no budget and produced a 33 KB brief from
+43 calls in seven minutes, including diffing two copies of the same PDF against
+each other and counting speaking time per microphone in a transcript. Nobody
+needed either. The user waits for this phase with nothing to look at, and every
+byte you write lands in all the members' prompts at once.
+
+So: find the sources, characterise each one, quote what is load-bearing, and
+put everything you chose not to open in `## Looked at and set aside`. A member
+that wants the third pass through a transcript can do it itself.
+
 ## There may be nothing to find
 
 Do not assume the material exists. The question may have no prior art in the

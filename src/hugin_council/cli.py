@@ -100,8 +100,7 @@ def _status(council: Council, mode: str) -> Status:
             MemberLine(
                 anon=council.anon_map[session.label],
                 name=short_model(session.model),
-                context=member_usage.context_tokens if member_usage else 0,
-                window=member_usage.context_window if member_usage else None,
+                read=member_usage.read_tokens if member_usage else 0,
                 turns=session.turns,
             )
         )
@@ -110,8 +109,7 @@ def _status(council: Council, mode: str) -> Status:
         slug=council.archive.slug,
         where=_where(council.ctx),
         rounds=council.archive.rounds,
-        secretary_context=usage.context_tokens if usage else 0,
-        secretary_window=usage.context_window if usage else None,
+        secretary_read=usage.read_tokens if usage else 0,
         cost_usd=council.total_cost_usd(),
         calls=council.calls_by_provider(),
         members=members,

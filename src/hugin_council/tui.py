@@ -62,19 +62,12 @@ class MemberLine:
 
     anon: str
     name: str
-    context: int
-    window: int | None
+    read: int
     turns: int
 
     def render(self) -> str:
-        ctx = humanise(self.context) if self.context else "-"
-        if self.context and self.window:
-            share = self.context / self.window
-            colour = WARN if share > 0.7 else OK
-            ctx = f"{colour}{ctx}/{humanise(self.window)}{RESET}"
-        else:
-            ctx = f"{VALUE}{ctx}{RESET}"
-        return f"{KEY}{self.anon[-1]}{RESET} {self.name} {ctx} {KEY}t{self.turns}{RESET}"
+        read = f"{VALUE}{humanise(self.read) if self.read else '-'}{RESET}"
+        return f"{KEY}{self.anon[-1]}{RESET} {self.name} {read} {KEY}t{self.turns}{RESET}"
 
 
 @dataclass
@@ -85,8 +78,7 @@ class Status:
     slug: str
     where: str
     rounds: int
-    secretary_context: int
-    secretary_window: int | None
+    secretary_read: int
     cost_usd: float
     calls: dict[str, int]
     members: list[MemberLine]
@@ -113,15 +105,16 @@ class Status:
         return " ".join(bits) or f"{KEY}no calls yet{RESET}"
 
     def lines(self) -> list[str]:
-        ctx = humanise(self.secretary_context) if self.secretary_context else "-"
-        if self.secretary_context and self.secretary_window:
-            ctx = f"{ctx}/{humanise(self.secretary_window)}"
+        # Tokens read on the last turn, not context use. The providers sum usage
+        # over every request a turn makes, so an agentic turn reads many times
+        # its own context and no honest denominator exists. See hugin.session.
+        read = humanise(self.secretary_read) if self.secretary_read else "-"
         first = (
             f" {self._mode_cell()} "
             f"{KEY}·{RESET} {VALUE}{self.slug}{RESET} "
             f"{KEY}·{RESET} {VALUE}{self.where}{RESET} "
             f"{KEY}·{RESET} {KEY}r{RESET}{VALUE}{self.rounds}{RESET} "
-            f"{KEY}·{RESET} {KEY}sec{RESET} {VALUE}{ctx}{RESET} "
+            f"{KEY}·{RESET} {KEY}sec read{RESET} {VALUE}{read}{RESET} "
             f"{KEY}·{RESET} {self._quota_cell()}"
         )
         second = "   " + "  ".join(m.render() for m in self.members) if self.members else ""
