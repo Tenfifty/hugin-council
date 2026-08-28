@@ -56,6 +56,16 @@ serial>  ...            the secretary only; never reaches the members
 /brief  /map  /status   print the brief, the latest synthesis, the roster
 ```
 
+While the secretary works, its tool calls scroll past as they happen:
+
+```
+  (gathering…)
+  · Read  memory/projects/migration.md
+  · Bash  pdftotext -layout "workshop-report-2026-08.pdf" -
+  · Grep  migration
+  (gathering done in 94s)
+```
+
 The status bar under the prompt carries the mode, the council slug, the primary
 context directory, the round count, the active secretary session's context use
 against its window, and what can honestly be called quota: claude's reported
@@ -317,6 +327,21 @@ or empty to inherit the secretary's own.
 
 The pattern to avoid is alternating effort turn by turn on one session, which
 pays the re-read every time.
+
+### The secretary is watched, the members are not
+
+`Session.send` takes an `on_event` callback, and the council passes one for
+every secretary turn: one line per tool call, per piece of text before the
+answer, and per permission denial.
+
+The first real gather made this necessary rather than nice. It ran seven
+minutes behind a spinner, and a spinner and a hang look identical. Reading the
+provider's own transcript afterwards was the only way to find out that it had
+spent that time diffing two copies of a PDF.
+
+The members keep the status line instead. They are asked in parallel and their
+events would interleave into nonsense, and the useful question about a member
+is not what it is doing but whether it has answered.
 
 ### State vs output
 

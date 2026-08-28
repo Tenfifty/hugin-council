@@ -14,14 +14,23 @@ import argparse
 import sys
 from pathlib import Path
 
-from hugin.session import SessionError, Usage
+from hugin.session import Event, SessionError, Usage
 
 from . import archive as arc
 from . import context
 from .config import CouncilConfig, load
 from .council import SECRETARY_COUNCIL, SECRETARY_SERIAL, Council
 from .markdown import render
-from .tui import COUNCIL, SERIAL, MemberLine, Shell, Status, ask_prompt, short_model
+from .tui import (
+    COUNCIL,
+    SERIAL,
+    MemberLine,
+    Shell,
+    Status,
+    ask_prompt,
+    event_line,
+    short_model,
+)
 
 HELP = """\
 Modes
@@ -53,6 +62,10 @@ def _resolve(cfg: CouncilConfig, args: argparse.Namespace) -> tuple[list[str], s
     return specs, secretary
 
 
+def _watch(event: Event) -> None:
+    print(event_line(event.kind, event.name, event.detail, colour=_colour()), flush=True)
+
+
 def _build(
     cfg: CouncilConfig,
     archive: arc.Archive,
@@ -60,7 +73,13 @@ def _build(
     ctx: context.WorkContext | None = None,
 ) -> Council:
     ctx = ctx or context.resolve(cfg, Path.cwd())
-    council = Council(cfg=cfg, ctx=ctx, archive=archive, on_note=lambda t: print(f"  ({t})"))
+    council = Council(
+        cfg=cfg,
+        ctx=ctx,
+        archive=archive,
+        on_note=lambda t: print(f"  ({t})", flush=True),
+        on_event=_watch,
+    )
     specs, secretary = _resolve(cfg, args)
     council.attach(specs, secretary)
     return council

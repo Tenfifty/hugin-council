@@ -108,6 +108,21 @@ class ShellTests(unittest.TestCase):
         self.assertEqual(calls, [COUNCIL])
 
 
+class EventLineTests(unittest.TestCase):
+    def test_one_line_always(self) -> None:
+        line = tui.event_line("tool", "Bash", "x " * 400, colour=False)
+        self.assertEqual(len(line.splitlines()), 1)
+        self.assertTrue(line.endswith("…"))
+
+    def test_newlines_in_a_command_are_flattened(self) -> None:
+        line = tui.event_line("tool", "Bash", "ls foo\n  && cat bar", colour=False)
+        self.assertEqual(line, "  · Bash  ls foo && cat bar")
+
+    def test_a_denial_is_coloured_as_a_warning(self) -> None:
+        self.assertIn(tui.WARN, tui.event_line("notice", "denied", "Write"))
+        self.assertNotIn(tui.WARN, tui.event_line("tool", "Read", "x"))
+
+
 class AskPromptTests(unittest.TestCase):
     def test_falls_back_to_input_off_a_terminal(self) -> None:
         with patch.object(tui.sys, "stdin") as stdin:

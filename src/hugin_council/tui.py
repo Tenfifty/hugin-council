@@ -13,6 +13,7 @@ on a non-tty, and driving the shell from a here-doc is how it gets tested.
 
 from __future__ import annotations
 
+import shutil
 import sys
 from dataclasses import dataclass
 from typing import Callable
@@ -37,6 +38,34 @@ KEY = "\x1b[38;5;245m"
 VALUE = "\x1b[38;5;252m"
 WARN = "\x1b[38;5;209m"
 OK = "\x1b[38;5;108m"
+
+
+DIM = "\x1b[38;5;242m"
+TOOL = "\x1b[38;5;109m"
+
+
+def event_line(kind: str, name: str, detail: str, colour: bool = True) -> str:
+    """One line for one thing the secretary did.
+
+    Always one line. A gather turn makes dozens of these, and a `cat` of a long
+    file wrapping over the terminal would bury the sequence, which is the part
+    worth seeing.
+    """
+    detail = " ".join(detail.split())
+    if kind == "notice":
+        head, body = f"! {name}", detail
+    elif kind == "tool":
+        head, body = f"· {name}", detail
+    else:
+        head, body = "·", detail
+    width = max(shutil.get_terminal_size((100, 24)).columns - 4, 40)
+    room = width - len(head) - 2
+    if len(body) > room:
+        body = body[: max(room - 1, 0)] + "…"
+    if not colour:
+        return f"  {head}  {body}".rstrip()
+    tint = WARN if kind == "notice" else TOOL if kind == "tool" else DIM
+    return f"  {tint}{head}{RESET}  {DIM}{body}{RESET}".rstrip()
 
 
 def short_model(model: str) -> str:

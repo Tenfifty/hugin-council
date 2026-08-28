@@ -10,13 +10,14 @@ One session would assert and suspend that constraint on every tab.
 from __future__ import annotations
 
 import string
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from hugin.prompts import resolve_prompt
-from hugin.session import Session, SessionError, parse_spec
+from hugin.session import Event, Session, SessionError, Turn, parse_spec
 
 from . import archive as arc
 from .config import CouncilConfig
@@ -67,6 +68,9 @@ class Council:
     members: list[Session] = field(default_factory=list)
     secretary_spec: str = ""
     on_note: Callable[[str], None] | None = None
+    # Set to watch the secretary work. The members are asked in parallel and
+    # their events would interleave into nonsense, so they keep the status line.
+    on_event: Callable[[Event], None] | None = None
 
     # ------------------------------------------------------------------ plumbing
 
@@ -90,6 +94,36 @@ class Council:
             read_only=read_only,
             extra_dirs=list(self.ctx.extra),
         )
+
+    def _secretary_turn(self, session: Session, prompt: str, label: str) -> Turn:
+        """One secretary turn, shown as a status row or as a running log.
+
+        Without a watcher this is one spinning line, which is honest only while
+        the turn is short. A gather turn can run 40 tool calls behind it, and
+        then a spinner and a hang look identical.
+        """
+        if self.on_event is None:
+            with StatusLine() as status:
+                status.start(label)
+                try:
+                    turn = session.send(prompt, timeout=self.cfg.turn_timeout)
+                except SessionError as exc:
+                    status.failed(label, str(exc)[:60])
+                    raise
+                status.done(label)
+            return turn
+
+        started = time.monotonic()
+        self.note(f"{label}…")
+        try:
+            turn = session.send(
+                prompt, timeout=self.cfg.turn_timeout, on_event=self.on_event
+            )
+        except SessionError as exc:
+            self.note(f"{label} failed after {time.monotonic() - started:.0f}s: {exc}")
+            raise
+        self.note(f"{label} done in {time.monotonic() - started:.0f}s")
+        return turn
 
     def _remember(self, key: str, session: Session) -> None:
         self.archive.put_session(key, session.to_dict())
@@ -130,14 +164,7 @@ class Council:
             CONTEXT=self.ctx.describe(),
         )
         secretary = self._session(self.secretary_spec, read_only=False, key=SECRETARY_COUNCIL)
-        with StatusLine() as status:
-            status.start("gathering")
-            try:
-                turn = secretary.send(prompt, timeout=self.cfg.turn_timeout)
-            except SessionError as exc:
-                status.failed("gathering", str(exc)[:60])
-                raise
-            status.done("gathering")
+        turn = self._secretary_turn(secretary, prompt, "gathering")
         self._remember(SECRETARY_COUNCIL, secretary)
         self.archive.write(arc.BRIEF_FILE, turn.text + "\n")
         return turn.text
@@ -244,14 +271,7 @@ class Council:
             # changed config, and so gathering keeps the secretary's own effort.
             # The switch costs one re-read of this session; see config.py.
             secretary.effort = self.cfg.synthesis_effort
-        with StatusLine() as status:
-            status.start("synthesising")
-            try:
-                result = secretary.send(prompt, timeout=self.cfg.turn_timeout)
-            except SessionError as exc:
-                status.failed("synthesising", str(exc)[:60])
-                raise
-            status.done("synthesising")
+        result = self._secretary_turn(secretary, prompt, "synthesising")
         self._remember(SECRETARY_COUNCIL, secretary)
         (round_dir / arc.SYNTHESIS).write_text(result.text + "\n", encoding="utf-8")
         return result.text
@@ -290,7 +310,7 @@ class Council:
                     "The council has moved on. Latest synthesis:\n\n"
                     f"{synthesis}\n\n---\n\n{text}"
                 )
-        result = session.send(text, timeout=self.cfg.turn_timeout)
+        result = self._secretary_turn(session, text, "secretary")
         self._remember(SECRETARY_SERIAL, session)
         self.archive.state["serial_synthesis_rounds"] = self.archive.rounds
         self.archive.save()
