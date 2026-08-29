@@ -219,6 +219,45 @@ class CouncilFlowTests(unittest.TestCase):
         secretary = next(s for s in self.made if s.model == "sec")
         self.assertIsNone(secretary.effort)
 
+    def test_the_secretary_is_told_the_house_rules_and_the_members_are_not(self) -> None:
+        # The hazards are only reachable from a shell, and only the secretary has
+        # one. A member that read them could act on none of them and would pay
+        # for the tokens in every round.
+        self.council.gather()
+        secretary = next(s for s in self.made if s.model == "sec")
+        self.assertIn("Chrome only through the wrapper.", secretary.sent[0])
+        self.assertIn("not a git repository", secretary.sent[0])
+
+        self.council.round("How should I do this?")
+        member_prompt = (self.archive.round_dir(1) / arc.MEMBER_PROMPT).read_text()
+        self.assertNotIn("Chrome only through the wrapper.", member_prompt)
+
+    def test_the_serial_channel_gets_them_too(self) -> None:
+        self.council.serial("what does this term mean?")
+        secretary = next(s for s in self.made if s.model == "sec")
+        self.assertIn("Chrome only through the wrapper.", secretary.sent[0])
+        self.assertIn("--break-system-packages", secretary.sent[0])
+
+    def test_no_placeholder_survives_into_a_prompt(self) -> None:
+        self.council.gather()
+        self.council.serial("hi")
+        for session in self.made:
+            for prompt in getattr(session, "sent", []):
+                self.assertNotIn("{{", prompt)
+
+    def test_house_rules_can_be_replaced_wholesale(self) -> None:
+        override = Path(self.tmp.name) / "house.md"
+        override.write_text("Only one rule: none.", encoding="utf-8")
+        self.council.cfg = a_config(
+            hugin_dirs=self.cfg.hugin_dirs,
+            projects_root=self.cfg.projects_root,
+            house_prompt_path=override,
+        )
+        self.council.gather()
+        secretary = next(s for s in self.made if s.model == "sec")
+        self.assertIn("Only one rule: none.", secretary.sent[0])
+        self.assertNotIn("Chrome only through the wrapper.", secretary.sent[0])
+
     def test_first_round_asks_for_options_and_archives_every_answer_raw(self) -> None:
         self.council.round("How should I do this?")
         round_dir = self.archive.round_dir(1)

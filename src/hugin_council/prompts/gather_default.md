@@ -12,6 +12,8 @@ repeat the same lookups, and so that they all reason from the same material.
 
 {{CONTEXT}}
 
+{{HOUSE}}
+
 ## What to produce
 
 A markdown brief. For each source: its path or URL, what it says, and one line

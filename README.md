@@ -226,9 +226,18 @@ to be visible in the prompt itself, not only in the status line.
 
 ### Members are read-only, the secretary writes
 
-`codex -s read-only`, `claude --permission-mode plan`, `agy --mode plan
---sandbox`. Otherwise three agents can write the same file without knowing about
-each other, which is an unpleasant class of bug to diagnose afterwards.
+`codex -s read-only`, `agy --mode plan --sandbox`, and for claude an explicit
+`--tools=Read,Grep,Glob,WebSearch,WebFetch` plus `--strict-mcp-config` with an
+empty server list. Otherwise three agents can write the same file without
+knowing about each other, which is an unpleasant class of bug to diagnose
+afterwards.
+
+Not `--permission-mode plan`, which was the first attempt. Plan mode is Claude
+Code's planning workflow rather than a sandbox: a member run under it wrote its
+whole answer into `~/.claude/plans/` as a side effect and was primed to produce
+an implementation plan instead of an answer. The tool list also closes a wider
+hole, since a member otherwise inherits the user's MCP servers and a "read-only"
+participant could have posted to Slack.
 
 ### Roster, not one member per provider
 
@@ -342,6 +351,30 @@ spent that time diffing two copies of a PDF.
 The members keep the status line instead. They are asked in parallel and their
 events would interleave into nonsense, and the useful question about a member
 is not what it is doing but whether it has answered.
+
+### The house rules are in the prompt, not discovered
+
+The secretary runs with a shell in whatever directory the command was launched
+from, so it never sees the standing instructions in the vault's `AGENTS.md`. The
+first consequence was a Chrome started on the real display, which steals the
+keyboard focus on every navigation while the user sits there waiting for it.
+
+`prompts/house_default.md` is pasted into the gather and serial prompts as
+`{{HOUSE}}`. The line for what belongs in it: **the cost of not knowing has to
+land on the first tool call.** Not knowing where a project directory lives costs
+one extra `find`, and can be discovered. Not knowing about the virtual display
+cannot, because by the time you could learn it the focus is already gone. Same
+for `git log` in a vault that is not a repository, `sudo` without a tty, and the
+`gws` credentials file whose revoked token looks exactly like an expired login.
+
+The members get none of it. They have no shell, so not one of the hazards is
+reachable from where they sit, and the paths are in the brief already.
+
+This does duplicate facts whose source of truth is the vault's `AGENTS.md`,
+which is the drift that file spends half a page warning about. Two mitigations:
+only invariants go in, nothing that churns; and the block ends by naming
+`AGENTS.md` as the place to read when the question turns out to be about the
+environment itself. `house_prompt_path` replaces it wholesale.
 
 ### State vs output
 

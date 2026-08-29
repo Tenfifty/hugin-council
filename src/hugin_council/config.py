@@ -70,6 +70,7 @@ class CouncilConfig(SharedConfig):
     turn_timeout: int = 1800
     llm: LLMConfig = field(default_factory=LLMConfig)
     gather_prompt_path: Path | None = None
+    house_prompt_path: Path | None = None
     members_prompt_path: Path | None = None
     synthesis_prompt_path: Path | None = None
     serial_prompt_path: Path | None = None
@@ -129,6 +130,7 @@ def build(merged: dict[str, Any]) -> CouncilConfig:
         turn_timeout=int(data.get("turn_timeout") or 1800),
         llm=LLMConfig.from_dict(merged.get("llm") or {}),
         gather_prompt_path=_opt(data.get("gather_prompt_path")),
+        house_prompt_path=_opt(data.get("house_prompt_path")),
         members_prompt_path=_opt(data.get("members_prompt_path")),
         synthesis_prompt_path=_opt(data.get("synthesis_prompt_path")),
         serial_prompt_path=_opt(data.get("serial_prompt_path")),

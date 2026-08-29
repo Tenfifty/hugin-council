@@ -83,6 +83,15 @@ class Council:
         text = path.read_text(encoding="utf-8")
         return text.replace("{{LANGUAGE}}", self.cfg.language_name)
 
+    def _house(self) -> str:
+        """Standing facts about the machine, for the sessions that have a shell.
+
+        The members never see this. They run read-only with Read, Grep, Glob and
+        the two web tools, so not one of the hazards is reachable from where they
+        sit, and the paths they might want are in the brief already.
+        """
+        return self._prompt("house", self.cfg.house_prompt_path).strip()
+
     def _session(self, spec: str, *, read_only: bool, key: str | None = None) -> Session:
         stored = self.archive.get_session(key) if key else None
         if stored:
@@ -162,6 +171,7 @@ class Council:
             self._prompt("gather", self.cfg.gather_prompt_path),
             QUESTION=self.archive.question,
             CONTEXT=self.ctx.describe(),
+            HOUSE=self._house(),
         )
         secretary = self._session(self.secretary_spec, read_only=False, key=SECRETARY_COUNCIL)
         turn = self._secretary_turn(secretary, prompt, "gathering")
@@ -300,6 +310,7 @@ class Council:
                 BRIEF=f"Brief:\n\n{brief}" if brief else "",
                 SYNTHESIS=f"Latest synthesis:\n\n{synthesis}" if synthesis else "",
                 CONTEXT=self.ctx.describe(),
+                HOUSE=self._house(),
             )
             text = f"{seed}\n\n---\n\n{text}"
         else:

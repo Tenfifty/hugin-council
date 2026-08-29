@@ -56,3 +56,8 @@ council:
 
   # Override any packaged prompt with your own file.
   # synthesis_prompt_path: ~/notes/instructions/council_synthesis.md
+
+  # The standing facts about this machine, pasted into the secretary's gather
+  # and serial prompts. The packaged default is written for one particular setup; point
+  # this somewhere else to replace it wholesale. The members never see it.
+  # house_prompt_path: ~/notes/instructions/council_house.md
