@@ -171,7 +171,13 @@ class CouncilFlowTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        self.cfg = a_config(hugin_dirs=[root], projects_root=root / "projs")
+        # Nothing is packaged, so the tests bring their own house rules. The
+        # sentinel is deliberately not a real rule from anyone's machine.
+        self.house = root / "house.md"
+        self.house.write_text("Chrome only through the wrapper.", encoding="utf-8")
+        self.cfg = a_config(
+            hugin_dirs=[root], projects_root=root / "projs", house_prompt_path=self.house
+        )
         self.archive = arc.Archive.create(root / "state", "How should I do this?")
         self.ctx = context.resolve(self.cfg, root)
         self.council = Council(cfg=self.cfg, ctx=self.ctx, archive=self.archive)
@@ -226,7 +232,6 @@ class CouncilFlowTests(unittest.TestCase):
         self.council.gather()
         secretary = next(s for s in self.made if s.model == "sec")
         self.assertIn("Chrome only through the wrapper.", secretary.sent[0])
-        self.assertIn("not a git repository", secretary.sent[0])
 
         self.council.round("How should I do this?")
         member_prompt = (self.archive.round_dir(1) / arc.MEMBER_PROMPT).read_text()
@@ -236,7 +241,6 @@ class CouncilFlowTests(unittest.TestCase):
         self.council.serial("what does this term mean?")
         secretary = next(s for s in self.made if s.model == "sec")
         self.assertIn("Chrome only through the wrapper.", secretary.sent[0])
-        self.assertIn("--break-system-packages", secretary.sent[0])
 
     def test_no_placeholder_survives_into_a_prompt(self) -> None:
         self.council.gather()
@@ -245,18 +249,29 @@ class CouncilFlowTests(unittest.TestCase):
             for prompt in getattr(session, "sent", []):
                 self.assertNotIn("{{", prompt)
 
-    def test_house_rules_can_be_replaced_wholesale(self) -> None:
-        override = Path(self.tmp.name) / "house.md"
-        override.write_text("Only one rule: none.", encoding="utf-8")
+    def test_an_unconfigured_install_gets_no_house_block_and_no_error(self) -> None:
+        # House rules are per-machine, so none are packaged. Someone else's
+        # standing facts would read as fact and be wrong, which is worse than
+        # silence -- but the tool still has to run.
         self.council.cfg = a_config(
-            hugin_dirs=self.cfg.hugin_dirs,
-            projects_root=self.cfg.projects_root,
-            house_prompt_path=override,
+            hugin_dirs=self.cfg.hugin_dirs, projects_root=self.cfg.projects_root
         )
         self.council.gather()
         secretary = next(s for s in self.made if s.model == "sec")
-        self.assertIn("Only one rule: none.", secretary.sent[0])
         self.assertNotIn("Chrome only through the wrapper.", secretary.sent[0])
+        self.assertNotIn("{{", secretary.sent[0])
+
+    def test_a_configured_house_path_that_is_missing_is_loud(self) -> None:
+        # The quiet fallback above must not swallow a typo in council.yaml: that
+        # would drop the rules without saying so, which is exactly the failure it
+        # is there to prevent.
+        self.council.cfg = a_config(
+            hugin_dirs=self.cfg.hugin_dirs,
+            projects_root=self.cfg.projects_root,
+            house_prompt_path=Path(self.tmp.name) / "typo.md",
+        )
+        with self.assertRaises(FileNotFoundError):
+            self.council.gather()
 
     def test_first_round_asks_for_options_and_archives_every_answer_raw(self) -> None:
         self.council.round("How should I do this?")

@@ -25,12 +25,4 @@ Question:
 
 {{HOUSE}}
 
-### Two more, because you are the one who does things
-
-- Editable Python installs go to the system interpreter:
-  `pip install -e <pkg> --user --break-system-packages`.
-- Before drafting anything the user will publish or send, read
-  `~/notes/instructions/tropes.md`. It names the AI writing tics the
-  text is held to, with examples.
-
 Write in {{LANGUAGE}}.

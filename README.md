@@ -4,7 +4,8 @@ Ask a question once, get answers from two or three model instances that do not
 see each other, and get them folded into one map of the possible paths.
 
 Part of the Hugin stack. Reads `~/.config/hugin/hugin.yaml` plus
-`~/.config/hugin/council.yaml` and honours `~/projs/hugin/CONVENTIONS.md`.
+`~/.config/hugin/council.yaml` and honours the conventions in
+[`hugin`](https://github.com/Tenfifty/hugin).
 
 ## Why
 
@@ -78,6 +79,44 @@ shows the count without a denominator.
 Config is `~/.config/hugin/council.yaml` over `~/.config/hugin/hugin.yaml`; see
 `config.example.yaml`. It runs with no `council.yaml` at all, since the built-in
 defaults carry the same rosters.
+
+## House rules
+
+The secretary is the one session with a shell, and it runs in whatever directory
+you launched from, so it starts out knowing nothing about your machine. Point
+`house_prompt_path` at a markdown file and it is pasted into the secretary's
+gather and serial prompts. Nothing is packaged and nothing is guessed: another
+person's standing facts would read as fact and be wrong, so an install without
+this setting simply has no house block.
+
+```yaml
+council:
+  house_prompt_path: ~/notes/instructions/council_house.md
+```
+
+The file is free-form prose. It is the right home for anything true about your
+setup rather than about the question — including who you are, since the
+secretary otherwise has no way to know and the serial prompt deliberately does
+not name you:
+
+```markdown
+## House rules for this machine
+
+You are working with Alex, who writes in Swedish and English.
+
+### Things that break something
+
+- `pkexec`, not `sudo`. You have no tty, so `sudo` hangs.
+- Never run `git` in ~/notes: an empty `.git` sits there and fools tooling.
+
+### Where things are
+
+- `~/notes/` — the vault. `projects/` is one file per project.
+- `~/src/` — code, one git repo per project.
+```
+
+The test for what belongs in it is below. The members never see this file: they
+have no shell, so none of the hazards are reachable from where they sit.
 
 ## Decisions
 
@@ -359,22 +398,29 @@ from, so it never sees the standing instructions in the vault's `AGENTS.md`. The
 first consequence was a Chrome started on the real display, which steals the
 keyboard focus on every navigation while the user sits there waiting for it.
 
-`prompts/house_default.md` is pasted into the gather and serial prompts as
+The file at `house_prompt_path` is pasted into the gather and serial prompts as
 `{{HOUSE}}`. The line for what belongs in it: **the cost of not knowing has to
 land on the first tool call.** Not knowing where a project directory lives costs
 one extra `find`, and can be discovered. Not knowing about the virtual display
 cannot, because by the time you could learn it the focus is already gone. Same
-for `git log` in a vault that is not a repository, `sudo` without a tty, and the
-`gws` credentials file whose revoked token looks exactly like an expired login.
+for `git log` in a vault that is not a repository, `sudo` without a tty, and a
+credentials file whose revoked token looks exactly like an expired login.
 
 The members get none of it. They have no shell, so not one of the hazards is
 reachable from where they sit, and the paths are in the brief already.
 
-This does duplicate facts whose source of truth is the vault's `AGENTS.md`,
-which is the drift that file spends half a page warning about. Two mitigations:
-only invariants go in, nothing that churns; and the block ends by naming
-`AGENTS.md` as the place to read when the question turns out to be about the
-environment itself. `house_prompt_path` replaces it wholesale.
+Nothing ships as a default. House rules are per-machine by definition, and a
+packaged set written for whoever wrote the tool would be inherited as fact by
+everyone who did not think to look — the failure mode this section exists to
+prevent, arriving through the fix. So an unconfigured install gets an empty
+block, while a `house_prompt_path` that points at nothing is a hard error: the
+quiet fallback must not swallow a typo and drop the rules without saying so.
+
+This does duplicate facts whose source of truth is likely the vault's own
+`AGENTS.md`, which is the drift such files spend half a page warning about. Two
+mitigations, both conventions for the file rather than code: only invariants go
+in, nothing that churns, and the block ends by naming the real source as the
+place to read when the question turns out to be about the environment itself.
 
 ### State vs output
 
@@ -453,8 +499,7 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
 ## TODO
 
 - [x] `hugin.session.Session`: persistent multi-turn sessions for codex, claude
-      and agy, resumed by id, with normalised usage. On branch
-      `session-abstraction` in `~/projs/hugin`.
+      and agy, resumed by id, with normalised usage. Shipped in `hugin`.
 - [x] Diff deferred out of v1, in favour of the full map plus independence
       framing. See "Scope of v1".
 - [x] Synthesis prompt. Free-text markdown, and the only hard formatting rule is
@@ -467,7 +512,7 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
 - [ ] After 10 to 20 real councils: read the archive and see what a data
       structure would actually need to hold. Not before.
 - [x] **cwd-aware context resolution.** The command must run from anywhere. Under
-      a `~/projs` subdirectory phase 1 should look at that repo *and* the general
+      a `projects_root` subdirectory phase 1 should look at that repo *and* the general
       hugin directories. Anywhere else, the hugin vault is the default, with the
       current directory available as a weak hint for finding files the question
       refers to.

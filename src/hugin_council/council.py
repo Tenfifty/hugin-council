@@ -89,7 +89,19 @@ class Council:
         The members never see this. They run read-only with Read, Grep, Glob and
         the two web tools, so not one of the hazards is reachable from where they
         sit, and the paths they might want are in the brief already.
+
+        Nothing is packaged: house rules are per-machine by definition, and a
+        default written for somebody else's setup is worse than none, since it
+        reads as fact. So an unconfigured install gets an empty block rather than
+        an error. A configured path that does not exist is still an error, which
+        is why this checks for the packaged file instead of catching the
+        FileNotFoundError that both cases would raise.
         """
+        if self.cfg.house_prompt_path is None and not any(
+            (PROMPT_DIR / f"house_{name}.md").exists()
+            for name in (self.cfg.language, "default")
+        ):
+            return ""
         return self._prompt("house", self.cfg.house_prompt_path).strip()
 
     def _session(self, spec: str, *, read_only: bool, key: str | None = None) -> Session:
