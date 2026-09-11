@@ -253,7 +253,7 @@ def _loop(council: Council) -> int:
         if line.startswith("/solo"):
             outcome = line[len("/solo"):].strip()
             if not outcome:
-                print("Which option did you take, and briefly why?")
+                print("What did you land on, and briefly why?")
                 try:
                     outcome = input("outcome> ").strip()
                 except (EOFError, KeyboardInterrupt):

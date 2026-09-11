@@ -273,11 +273,11 @@ class CouncilFlowTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             self.council.gather()
 
-    def test_first_round_asks_for_options_and_archives_every_answer_raw(self) -> None:
+    def test_first_round_asks_for_breadth_and_archives_every_answer_raw(self) -> None:
         self.council.round("How should I do this?")
         round_dir = self.archive.round_dir(1)
         prompt = (round_dir / arc.MEMBER_PROMPT).read_text()
-        self.assertIn("Give several distinct options", prompt)
+        self.assertIn("distinct ways forward", prompt)
         self.assertIn("council of 2", prompt)
         for label in ("claude:a", "codex:b"):
             body = (round_dir / arc.answer_filename(label)).read_text()
@@ -299,11 +299,14 @@ class CouncilFlowTests(unittest.TestCase):
         self.assertIn("Do not revise your position", prompt)
         self.assertIn("second", prompt)
 
-    def test_previous_map_is_handed_to_the_secretary_to_keep_numbering(self) -> None:
+    def test_previous_synthesis_is_handed_to_the_secretary(self) -> None:
         self.council.round("first")
         self.council.round("second")
         prompt = (self.archive.round_dir(2) / arc.SECRETARY_PROMPT).read_text()
-        self.assertIn("numbering you must keep", prompt)
+        self.assertIn("## The synthesis so far", prompt)
+        # And the members are not told to number or tag anything.
+        self.assertNotIn("V1", prompt)
+        self.assertNotIn("number", prompt.split("## The synthesis so far")[0].lower().replace("do not number", ""))
 
     def test_serial_never_reaches_the_members(self) -> None:
         self.council.round("first")

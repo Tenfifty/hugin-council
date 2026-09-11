@@ -1,7 +1,8 @@
 # hugin-council
 
 Ask a question once, get answers from two or three model instances that do not
-see each other, and get them folded into one map of the possible paths.
+see each other, and get them folded into one synthesis. Then talk on, with all
+of them at once.
 
 Part of the Hugin stack. Reads `~/.config/hugin/hugin.yaml` plus
 `~/.config/hugin/council.yaml` and honours the conventions in
@@ -23,19 +24,24 @@ worth having.
 | 2 | members | Same question and same background to each, in parallel. Each knows it is part of a council and what that means. May look up more on its own. |
 | 2b | secretary | Synthesis: fold the answers into the map. |
 | serial (any time) | secretary | Tab out of the council to ask the secretary something or to do work with side effects. Never enters the council context. |
-| 3 | secretary | `solo`: dismiss the members for good and continue in serial, recording which option was taken. |
+| 3 | secretary | `solo`: dismiss the members for good and continue in serial, recording what was landed on. |
 
 Rounds repeat 2 and 2b. Your turn goes to every member verbatim.
 
+The shape is a plain conversation with several models at once: the secretary
+gathers, everyone answers, the answers are synthesised, you say what you found
+useful and where to go next, everyone gets the synthesis plus your turn, and so
+on. Steering is in your words. Nothing is numbered or tagged for reference, and
+nobody keeps score.
+
 `/critique` is a round with a different phase 2: each member gets the other
-members' raw answers from the last round, lettered as in the map, and is asked
-where they are right about something it missed, where they are wrong and why,
-and which options it now favours. Their own answer is not resent, since each
-holds its own session. The synthesis then folds the reviews under the options
-they concern, so an objection ends up as an attribute of a path, which is where
-the map puts objections anyway. The members otherwise never see each other, and
-this is the one deliberate exception: it is asked for, and it happens after
-independent answers exist, so it cannot pull round one towards consensus.
+members' raw answers from the last round, lettered as in the synthesis, and is
+asked where they are right about something it missed, where they are wrong and
+why, and what it now thinks. Their own answer is not resent, since each holds
+its own session. The reviews are then synthesised like answers. The members
+otherwise never see each other, and this is the one deliberate exception: it is
+asked for, and it happens after independent answers exist, so it cannot pull
+round one towards consensus.
 
 ## Using it
 
@@ -177,57 +183,54 @@ would otherwise have been fields:
 effort, session id), not content. Structuring the state is a different thing
 from structuring the synthesis.
 
-Two consequences:
-
-- **Stable ids survive without a schema.** Numbering the options in the
-  synthesis (V1, V2, V3, never reused across rounds) is a prompt convention, not
-  a schema requirement. It is what lets a turn be broadcast verbatim, so it is
-  the one formatting rule the synthesis prompt insists on.
-- **`council stats` is not a feature, it is a later pass** over the archive.
+One consequence: **`council stats` is not a feature, it is a later pass** over the archive.
   Probably better that way: what to count can be decided once it is known what
   mattered. The question it eventually answers is whether Fable 5 earns its seat
   next to Opus 5, or 3.7 Flash next to 3.1 Pro.
 
-### It is organised by path, not by agreement
+### The answers set the structure, not the prompt
 
 Disagreement between members is real but rare, and it is not the axis. Usually
 there are simply several possible ways forward, sometimes clearly separable and
-sometimes not. So the map sorts on path, and an objection is an attribute of a
-path rather than a section of its own. Criticism is the user's job and arrives
-naturally once a track is picked.
+sometimes not; sometimes the answers are one answer with variations, or a list
+of facts. The synthesis prompt tells the secretary to organise by whatever is
+actually there and to impose nothing, and an objection goes next to the thing it
+is about, attributed. Criticism is the user's job and arrives naturally once a
+track is picked.
 
-Round 1 must therefore ask for **breadth, not a recommendation.** Ask three good
-models what to do and they converge on the same obvious answer; ask for several
-distinct paths with trade-offs and they do not.
+Round 1 asks for **breadth where the question is open.** Ask three good models
+what to do and they converge on the same obvious answer; ask for the distinct
+ways forward with trade-offs and they do not.
 
-Synthesis is clustering, not comparison: the hard part is seeing that one
-member's "briefing skill" and another's "shared context file" are the same path
-under two names, while both members' "consortium" mean different things. Cluster
-on mechanism, not on wording. The secretary may classify and compress but may
+Synthesis is merging, not comparison: the hard part is seeing that one member's
+"briefing skill" and another's "shared context file" are the same thing under
+two names, while both members' "consortium" mean different things. Merge on
+mechanism, not on wording. The secretary may classify and compress but may
 **not** resolve a disagreement or invent a middle position nobody proposed.
 
-### Path ids are stable across rounds
+### Steering is in plain words
 
-V1, V2, V3 keep their numbers for the life of the council, so they become shared
-vocabulary between you and every member. That is what lets your turn be
-broadcast verbatim: "go with V2 but skip fzf" lands correctly in three threads
-that each framed the problem differently. A new path in round three takes the
-next free number and keeps it.
+Your turn goes to every member verbatim, with the latest synthesis in front of
+it, and that is the whole referent mechanism: "the second approach, but without
+fzf" lands in three threads that framed the problem differently because all
+three have just read the same synthesis. An earlier design numbered the options
+(V1, V2, V3, stable across rounds) so that a turn could point at one by id. It
+was ripped out on 2026-09-11: it made the prompts wordy, it assumed every
+council is a choice between options, and in practice the user says what they
+liked in words and narrows the questions from there. Members never upgrade or
+downgrade a numbered position; they answer the next question.
 
-This replaced an earlier design where the secretary rewrote your turn per
-member to resolve referents. Stable numbering solves the same problem for free.
-
-### The secretary holds a session; members hold sessions; only the map is on disk
+### The secretary holds a session; members hold sessions; only the synthesis is on disk
 
 The secretary is not a judge or a chair. It is one instance doing serial jobs:
 gather, cluster, synthesise, write files. It does hold a session, because
-context continuity makes those jobs better: clustering in round three is much
-easier if it remembers why V2's boundary was drawn where it was, and gathering
+context continuity makes those jobs better: merging in round three is much
+easier if it remembers why it drew a boundary where it did, and gathering
 can skip what it already rejected. It having continuity does not make it own the
 conversation, because it has no opinions to own it with.
 
-The map file stays on disk anyway, as a **checkpoint** rather than as the
-secretary's state: it is needed for the diffs and for the `.md` deliverable, so
+The synthesis stays on disk anyway, as a **checkpoint** rather than as the
+secretary's state: it is needed for the archive and for the `.md` deliverable, so
 it costs nothing extra, and it means a dead session or a swapped secretary model
 can be rehydrated at the cost of the soft reasoning layer only.
 
@@ -478,23 +481,23 @@ map is sent with an explicit instruction not to revise a position in order to
 match the others, and that a disagreement will be recorded as an objection
 rather than resolved.
 
-**v1 has no data structure at all.** Not paths, not items, not typed relations:
-the synthesis is markdown and nothing else. Every field that was drafted here was
-a guess about output that has never once been produced. The archive is what makes
-that safe, and stable option numbering is what makes it usable, so those are the
-two things v1 does insist on.
+**v1 has no data structure at all.** Not paths, not items, not typed relations,
+not numbered options: the synthesis is markdown and nothing else. Every field
+that was drafted here was a guess about output that has never once been
+produced. The archive is what makes that safe, so it is the one thing v1 does
+insist on.
 
 **v1 measures its own need**, but by reading rather than by counting. Ten or
 twenty councils in the archive answer three questions that no amount of design
 could: whether the full map causes members to stop contributing anything of
-their own, whether the synthesis gets unreadable as options accumulate, and what
+their own, whether the synthesis gets unreadable as rounds accumulate, and what
 a data structure would have to hold if one is wanted. Two upgrades, two separate
 triggers, not to be bundled:
 
 | Symptom | Upgrade |
 |---------|---------|
 | a member stops saying anything the others did not | a per-member diff, or harder framing first |
-| the synthesis gets hard to read as options accumulate | some structure, informed by the archive |
+| the synthesis gets hard to read as rounds accumulate | some structure, informed by the archive |
 
 ## Rejected, with reasons
 
@@ -510,8 +513,10 @@ So these do not get re-argued:
 - **A stateless secretary.** Considered, then dropped: context continuity helps
   the jobs it actually does, and the "nobody owns the conversation" principle was
   about opinions, which the secretary has none of.
-- **Rewriting the user's turn per member.** Made unnecessary by stable option
-  numbering in the synthesis.
+- **Rewriting the user's turn per member.** Unnecessary: every member has just
+  read the same synthesis, so a turn written against it lands in every thread.
+- **Numbered options (V1, V2, V3) as shared vocabulary.** Built, then ripped
+  out; see "Steering is in plain words".
 - **The `gemini` binary as the third voice.** `agy` replaced it in the stack, and
   it resumes on a stable id where `gemini --resume` takes a positional index.
 
@@ -534,10 +539,9 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       and agy, resumed by id, with normalised usage. Shipped in `hugin`.
 - [x] Diff deferred out of v1, in favour of the full map plus independence
       framing. See "Scope of v1".
-- [x] Synthesis prompt. Free-text markdown, and the only hard formatting rule is
-      stable numbering of the options so a turn can be broadcast verbatim. Plus
-      the constraint that the secretary may classify and compress but not resolve
-      a disagreement or invent a middle position nobody proposed.
+- [x] Synthesis prompt. Free-text markdown with no formatting rule, plus the
+      constraint that the secretary may classify and compress but not resolve a
+      disagreement or invent a middle position nobody proposed.
 - [x] Archive layout as above, with raw answers kept verbatim. This is the one
       part that has to be right from the start, because it is what makes a
       structure extractable later at all.
@@ -610,7 +614,7 @@ separate repo, `hugin-munin`: Huginn is thought, Muninn is memory.
       promote-to-broadcast command.
 - [x] `solo`: dismiss the members, retire the council session, promote the serial
       session. No transition turn needed, since that session was never
-      restrained. `solo` also **records the outcome**: which option was taken and
+      restrained. `solo` also **records the outcome**: what was landed on and
       briefly why, in prose. One line, and it is what turns the archive from a
       pile of transcripts into a labelled record. Every later analysis pass
       depends on it, so it is not optional.

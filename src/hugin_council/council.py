@@ -250,9 +250,9 @@ class Council:
     def critique(self, focus: str = "") -> str:
         """Have the members review each other's last answers, then synthesise.
 
-        A round like any other in the archive, so the objections land under the
-        options they concern and keep the numbering. The members' own answers
-        are not resent: each holds its own session.
+        A round like any other in the archive, so the reviews are folded into
+        the synthesis like answers. The members' own answers are not resent:
+        each holds its own session.
         """
         prompts = self._critique_prompts(focus)
         round_dir = self.archive.open_round()
@@ -267,7 +267,7 @@ class Council:
             self.note(f"no answer from: {', '.join(failed)}")
         turn = (
             "The participants have reviewed each other's previous answers; the answers "
-            "below are those reviews. Fold each objection or concession under the option "
+            "below are those reviews. Fold each objection or concession in next to what "
             "it concerns, attributed, and note where a participant changed position."
         )
         if focus:
@@ -353,7 +353,7 @@ class Council:
             TURN=f"## The user's latest turn\n\n{turn}" if turn.strip() else "",
             ANSWERS=blocks,
             PREVIOUS=(
-                f"## The map so far, whose numbering you must keep\n\n{previous}"
+                f"## The synthesis so far\n\n{previous}"
                 if previous
                 else ""
             ),
@@ -414,7 +414,7 @@ class Council:
     # --------------------------------------------------------------------- solo
 
     def solo(self, outcome: str) -> None:
-        """Dismiss the members for good and record which option was taken.
+        """Dismiss the members for good and record what was landed on.
 
         No transition turn is needed: the serial session was never under the
         may-not-resolve constraint, so there is no restraint to lift.
