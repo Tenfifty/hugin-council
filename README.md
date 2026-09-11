@@ -55,7 +55,19 @@ serial>  ...            the secretary only; never reaches the members
 /promote <text>         carry something from serial into the next broadcast
 /solo [text]            dismiss the members for good, recording the outcome
 /brief  /map  /status   print the brief, the latest synthesis, the roster
+/answers [N]            every raw answer of round N (default: latest)
+/answer A [N]           one member's raw answer, by letter
+/edit [text]            write the turn in $EDITOR
 ```
+
+Enter sends. Alt-Enter or Ctrl-J starts a new line, since a question to a
+council is often several paragraphs; pasted text keeps its newlines anyway. Tab
+completes a half-typed slash command and switches mode on any other line.
+Ctrl-C during a round kills the members' turns, keeps whatever answers had
+arrived (in the round directory, next to an `aborted.md`), and brings the
+prompt back with the council intact. A turn that took longer than
+`notify_after` seconds (default 30) ends with a terminal bell and a desktop
+notification where `notify-send` is available.
 
 While the secretary works, its tool calls scroll past as they happen:
 
@@ -293,18 +305,16 @@ council:
   secretary: claude:claude-opus-5:high
   roster: default
   rosters:
-    default: [claude:claude-opus-5:high, codex:gpt-5.6-sol:high]
-    wide:    [claude:claude-opus-5:high, codex:gpt-5.6-sol:high,
-              codex:gpt-5.5:xhigh, agy:gemini-3.1-pro-high, agy:gemini-3.7-flash-high]
+    default: [claude:claude-fable-5-1:high, codex:gpt-6-astra:high]
+    wide:    [claude:claude-fable-5-1:high, codex:gpt-6-astra:high, agy:gemini-3.8-flash-medium]
     cheap:   [claude:claude-haiku-4-5-20251001:medium, codex:gpt-5.4-mini:medium]
 ```
 
-fable-5 is out of every roster as of 2026-08-25, pending an account upgrade. It
-works, so this is a quota decision and not a capability one, and it is the one
-that costs something: fable next to opus was the same-brand-different-generation
-pairing, which is a different axis of variation from opus next to sol. Until it
-returns, `default` is two voices and `cheap` pairs haiku with mini. The lines are
-commented rather than deleted, in `config.py` and in `config.example.yaml`.
+The secretary is not on any roster. Opus holds the sessions and does the file
+work; the members (Fable 5.1, GPT 6 Astra, and in `wide` Gemini 3.8 Flash) do
+the hard reasoning, so the two lists do not overlap. Members run at `high`,
+which is where the effort belongs; synthesis is stepped down separately via
+`synthesis_effort`.
 
 `--roster wide` selects, `--member` appends for a one-off, `--secretary`,
 `--secretary-model` and `--secretary-effort` override the default. A flag and a
@@ -348,6 +358,16 @@ cache is server-side, and on subscriptions a miss costs rate-limit budget rather
 than money.
 
 ### Effort is part of the cache key, so it is set per role and not per turn
+
+This is loosening, model by model. The Claude API has a beta per-message effort
+(`mid-conversation-output-config-2026-07-01`) on Fable 5.1, Mythos 5.1 and Opus
+5 that leaves the cached prefix intact; Claude Code 2.1.260 (2026-09-03) uses it
+for Fable 5.1 only, and its docs still say every other model has one cache per
+effort level. GPT-6 Astra accepts a `configuration_update` item that does the
+same, and codex 0.154 emits it behind the experimental `reasoning_effort_override`
+flag (off by default; it 400s on the 5.6 models). None of that is re-measured
+here, and with an Opus 5 secretary the re-read below still applies as of
+2026-09-11.
 
 Measured 2026-08-25, four turns on one session at high, high, low, low, with a
 ~16k-token prefix:

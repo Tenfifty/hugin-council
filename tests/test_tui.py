@@ -149,3 +149,56 @@ class FallbackTests(unittest.TestCase):
         with patch("builtins.input", return_value="typed") as fake:
             self.assertEqual(shell.prompt(), "typed")
         self.assertTrue(fake.called)
+
+
+class TypingTests(unittest.TestCase):
+    def test_enter_sends_and_alt_enter_and_ctrl_j_insert_newlines(self) -> None:
+        if not tui.HAVE_PT:
+            self.skipTest("prompt_toolkit not installed")
+        from prompt_toolkit.keys import Keys
+
+        keys = tui._bindings()
+        self.assertTrue(keys.get_bindings_for_keys((Keys.Enter,)))
+        self.assertTrue(keys.get_bindings_for_keys((Keys.Escape, Keys.Enter)))
+        self.assertTrue(keys.get_bindings_for_keys((Keys.ControlJ,)))
+
+    def test_edit_text_round_trips_through_the_editor(self) -> None:
+        import os
+        import stat
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            editor = os.path.join(tmp, "ed")
+            with open(editor, "w", encoding="utf-8") as handle:
+                handle.write('#!/bin/sh\nprintf "\\nand a second line\\n" >> "$1"\n')
+            os.chmod(editor, os.stat(editor).st_mode | stat.S_IXUSR)
+            text = tui.edit_text("first line", editor=editor)
+        self.assertEqual(text, "first line\nand a second line")
+
+    def test_edit_text_left_empty_means_nothing(self) -> None:
+        self.assertEqual(tui.edit_text("", editor="true"), "")
+
+    def test_notify_is_quiet_off_a_tty(self) -> None:
+        import io
+
+        out = io.StringIO()
+        with patch("hugin_council.tui.shutil.which", return_value=None):
+            tui.notify("round 2 done", stream=out)
+        self.assertEqual(out.getvalue(), "")
+
+
+class CompletionTests(unittest.TestCase):
+    def test_a_lone_slash_word_completes_and_anything_else_does_not(self) -> None:
+        self.assertEqual(tui.complete_command("/an"), ["/answer", "/answers"])
+        self.assertEqual(tui.complete_command("/map"), ["/map"])
+        self.assertEqual(tui.complete_command("/answer A"), [])
+        self.assertEqual(tui.complete_command("how about /map"), [])
+        self.assertEqual(tui.complete_command(""), [])
+
+    def test_every_command_the_loop_knows_is_completable(self) -> None:
+        from hugin_council.cli import HELP
+
+        import re
+
+        listed = set(re.findall(r"^\s+(/[a-z]+)", HELP, flags=re.M))
+        self.assertTrue(listed <= set(tui.COMMANDS), listed - set(tui.COMMANDS))

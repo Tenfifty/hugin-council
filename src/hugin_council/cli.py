@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from hugin.session import Event, SessionError, Usage
@@ -28,7 +29,9 @@ from .tui import (
     Shell,
     Status,
     ask_prompt,
+    edit_text,
     event_line,
+    notify,
     short_model,
 )
 
@@ -39,11 +42,19 @@ Modes
   /serial, /s         talk to the secretary only; never reaches the members
   > <text>            one-shot to the secretary without leaving council mode
 
+Typing
+  Enter               send;  Alt-Enter or Ctrl-J for a new line
+  Tab                 completes a half-typed /command; switches mode otherwise
+  /edit [text]        write the turn in $EDITOR instead
+  Ctrl-C              break off the round in progress; the council survives
+
 Commands
   /promote <text>     carry something from serial into the next broadcast
   /solo [text]        dismiss the members for good; text records the outcome
   /brief              print the gathered brief
   /map                print the latest synthesis
+  /answers [N]        print every raw answer of round N (default: latest)
+  /answer A [N]       print one member's raw answer, by letter
   /status             roster, rounds, where the archive is
   /help, /quit
 """
@@ -99,6 +110,38 @@ def _print_block(title: str, body: str | None) -> None:
         return
     print()
     _show(body)
+    print()
+
+
+def _print_answers(council: Council, words: list[str]) -> None:
+    """``/answers [N]`` and ``/answer A [N]``.
+
+    The synthesis is the secretary's reading of the answers; this is the way
+    to check it against what a member actually wrote, which is the point of
+    archiving the answers raw.
+    """
+    letter = None
+    number = None
+    for word in words:
+        if word.isdigit():
+            number = int(word)
+        elif len(word) == 1 and word.isalpha():
+            letter = word.upper()
+        else:
+            print("  /answers [N]   /answer A [N]")
+            return
+    number = number or council.archive.rounds
+    answers = council.archive.answers(number)
+    if letter:
+        answers = [a for a in answers if a.anon.endswith(letter)]
+    if not answers:
+        who = f"from {letter} " if letter else ""
+        print(f"  no answers {who}in round {number}" if number else "  no rounds yet")
+        return
+    for answer in answers:
+        anon = answer.anon or "?"
+        print()
+        _show(f"## {anon} · {short_model(answer.label)} · round {number}\n\n{answer.text}")
     print()
 
 
@@ -187,6 +230,9 @@ def _loop(council: Council) -> int:
         if line == "/map":
             _print_block("synthesis", council.archive.latest_synthesis())
             continue
+        if line == "/answers" or line.startswith("/answers ") or line.startswith("/answer "):
+            _print_answers(council, line.split()[1:])
+            continue
         if line.startswith("/promote"):
             text = line[len("/promote"):].strip()
             if not text:
@@ -216,22 +262,50 @@ def _loop(council: Council) -> int:
             shell.mode = SERIAL
             print("  members dismissed, outcome recorded, continuing in serial")
             continue
-        if line.startswith("/"):
+        if line == "/edit" or line.startswith("/edit "):
+            line = edit_text(line[len("/edit"):].strip())
+            if not line:
+                print("  nothing written, nothing sent")
+                continue
+        elif line.startswith("/"):
             print(f"  unknown command: {line.split()[0]}  (/help)")
             continue
 
         one_shot = line.startswith(">")
         text = line[1:].strip() if one_shot else line
         target = SERIAL if (one_shot or mode == SERIAL) else COUNCIL
-        try:
-            if target == SERIAL:
-                print()
-                _show(council.serial(text))
-            else:
-                _show(council.round(text))
-        except SessionError as exc:
-            print(f"  failed: {exc}", file=sys.stderr)
+        _run_turn(council, target, text)
     return 0
+
+
+def _run_turn(council: Council, target: str, text: str) -> bool:
+    """One turn to the secretary or the council, with the two exits a long
+    wait needs: Ctrl-C brings the prompt back with the council intact, and a
+    wait long enough to have looked away from ends with a notification."""
+    started = time.monotonic()
+    what = "secretary" if target == SERIAL else f"round {council.archive.rounds + 1}"
+    try:
+        if target == SERIAL:
+            print()
+            _show(council.serial(text))
+        else:
+            _show(council.round(text))
+    except SessionError as exc:
+        print(f"  failed: {exc}", file=sys.stderr)
+        _notify(council, f"{what} failed", started)
+        return False
+    except KeyboardInterrupt:
+        print(f"\n  {what} broken off after {time.monotonic() - started:.0f}s; the council is intact")
+        return False
+    _notify(council, f"{what} done", started)
+    return True
+
+
+def _notify(council: Council, text: str, started: float) -> None:
+    after = council.cfg.notify_after
+    elapsed = time.monotonic() - started
+    if after and elapsed >= after:
+        notify(f"{text} in {elapsed:.0f}s  ({council.archive.slug})")
 
 
 def _cmd_ask(cfg: CouncilConfig, args: argparse.Namespace) -> int:
@@ -259,11 +333,14 @@ def _cmd_ask(cfg: CouncilConfig, args: argparse.Namespace) -> int:
     except SessionError as exc:
         print(f"  gathering failed: {exc}", file=sys.stderr)
         print("  continuing without a brief")
-    try:
-        _show(council.round(question))
-    except SessionError as exc:
-        print(f"  first round failed: {exc}", file=sys.stderr)
-        return 1
+    except KeyboardInterrupt:
+        # The question is on disk; the first council> turn broadcasts it.
+        print("\n  gathering broken off; continuing without a brief")
+        return _loop(council)
+    if not _run_turn(council, COUNCIL, question):
+        # A failed or broken-off first round is not the end: the council is
+        # created and `resume` would find it, so stay in it.
+        print("  the question is archived; a council> turn broadcasts it")
     return _loop(council)
 
 

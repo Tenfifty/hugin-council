@@ -11,33 +11,29 @@ council:
   # Which roster `ask` uses when --roster is not given.
   roster: default
 
-  # fable-5 is commented out of the built-in defaults until the account is
-  # upgraded. It works; this is a quota decision. Uncomment to get the
-  # same-brand-different-generation pairing back.
+  # The secretary is not a member: opus keeps the sessions, the members do the
+  # hard reasoning, so the two lists do not overlap.
   rosters:
     default:
-      - claude:claude-opus-5:high
-      # - claude:claude-fable-5:high
-      - codex:gpt-5.6-sol:high
+      - claude:claude-fable-5-1:high
+      - codex:gpt-6-astra:high
     # agy appears here and nowhere else: the quota is the scarce resource, so it
     # is spent only when breadth is asked for explicitly. Note that agy bakes the
     # reasoning level into the gemini model slug, so no third field is needed.
     wide:
-      - claude:claude-opus-5:high
-      - codex:gpt-5.6-sol:high
-      - codex:gpt-5.5:xhigh
-      - agy:gemini-3.1-pro-high
-      - agy:gemini-3.7-flash-high
+      - claude:claude-fable-5-1:high
+      - codex:gpt-6-astra:high
+      - agy:gemini-3.8-flash-medium
     cheap:
       - claude:claude-haiku-4-5-20251001:medium
       - codex:gpt-5.4-mini:medium
 
   # Effort for phase 2b only, since folding answers together is lighter work
-  # than producing them. Effort is part of the server-side prompt cache key for
-  # both claude and codex (measured 2026-08-25), so stepping down costs one full
-  # re-read of the secretary's conversation and every synthesis after it is
-  # cached again: once per council, not once per round. Empty means "whatever
-  # the secretary spec says".
+  # than producing them. Effort is part of the server-side prompt cache key
+  # (measured 2026-08-25), so stepping down costs one re-read of the secretary's
+  # conversation per council, not per round. Only fable-5-1 in Claude Code and
+  # gpt-6-astra in codex (behind a flag) escape that as of 2026-09; opus-5 does
+  # not yet. Empty means "whatever the secretary spec says".
   synthesis_effort: medium
 
   # State, not output: safe to wipe. The finished write-up belongs in the vault.
@@ -53,6 +49,11 @@ council:
 
   # Seconds per turn. Members may go looking through the vault, so not short.
   turn_timeout: 1800
+
+  # A turn that took at least this many seconds ends with a terminal bell and,
+  # if notify-send and a desktop are there, a notification. Rounds take minutes
+  # and you will have looked away. 0 turns it off.
+  notify_after: 30
 
   # Override any packaged prompt with your own file.
   # synthesis_prompt_path: ~/notes/instructions/council_synthesis.md

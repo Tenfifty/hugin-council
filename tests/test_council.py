@@ -386,3 +386,82 @@ class SoloEdgeTests(unittest.TestCase):
             # solo does not consume it; the CLI warns instead, so nothing is
             # silently dropped from the archive.
             self.assertEqual(archive.state["promoted"], ["never sent"])
+
+
+class AbortTests(unittest.TestCase):
+    """Ctrl-C during a round: members cancelled, arrivals kept, council intact."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.cfg = a_config(hugin_dirs=[root], projects_root=root / "projs")
+        self.archive = arc.Archive.create(root / "state", "How should I do this?")
+        self.ctx = context.resolve(self.cfg, root)
+        self.council = Council(cfg=self.cfg, ctx=self.ctx, archive=self.archive)
+        self.made: list[FakeSession] = []
+
+        def fake_session(spec, read_only, key=None):
+            provider, _, rest = spec.partition(":")
+            model, _, _ = rest.partition(":")
+            session = FakeSession(provider=provider, cwd=self.ctx.primary, model=model, read_only=read_only)
+            self.made.append(session)
+            return session
+
+        patcher = patch.object(Council, "_session", side_effect=fake_session, autospec=False)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        self.council.attach(["claude:a", "codex:b"], "claude:sec")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_ctrl_c_cancels_the_members_keeps_arrivals_and_marks_the_round(self) -> None:
+        fast, slow = self.council.members
+
+        def interrupted(prompt, timeout=900):
+            raise KeyboardInterrupt
+
+        with patch.object(slow, "send", side_effect=interrupted), patch.object(
+            fast, "cancel"
+        ) as cancel_fast, patch.object(slow, "cancel") as cancel_slow:
+            with self.assertRaises(KeyboardInterrupt):
+                self.council.round("first")
+        cancel_fast.assert_called_once()
+        cancel_slow.assert_called_once()
+        round_dir = self.archive.round_dir(1)
+        self.assertTrue((round_dir / arc.answer_filename(fast.label)).exists())
+        self.assertFalse((round_dir / arc.answer_filename(slow.label)).exists())
+        self.assertIn("1 of 2", (round_dir / arc.ABORTED).read_text())
+        self.assertFalse((round_dir / arc.SYNTHESIS).exists())
+        # The round counted, and the next one is a fresh directory.
+        self.assertEqual(self.archive.rounds, 1)
+        self.assertIsNone(self.archive.latest_synthesis())
+        self.council.round("second")
+        self.assertTrue((self.archive.round_dir(2) / arc.SYNTHESIS).exists())
+
+
+class NotifyConfigTests(unittest.TestCase):
+    def test_notify_after_defaults_and_can_be_switched_off(self) -> None:
+        self.assertEqual(build({"vault_path": "/v"}).notify_after, 30)
+        self.assertEqual(build({"vault_path": "/v", "council": {"notify_after": 0}}).notify_after, 0)
+        self.assertEqual(build({"vault_path": "/v", "council": {"notify_after": 90}}).notify_after, 90)
+
+
+class AnswersTests(unittest.TestCase):
+    def test_answers_are_read_back_lettered_and_in_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = arc.Archive.create(Path(tmp), "q")
+            rd = archive.open_round()
+            (rd / arc.answer_filename("codex:b")).write_text(
+                "<!-- Participant B = codex:b -->\n\nsecond\n", encoding="utf-8"
+            )
+            (rd / arc.answer_filename("claude:a")).write_text(
+                "<!-- Participant A = claude:a -->\n\nfirst\n", encoding="utf-8"
+            )
+            answers = archive.answers()
+            self.assertEqual([(a.anon, a.label, a.text) for a in answers], [
+                ("Participant A", "claude:a", "first"),
+                ("Participant B", "codex:b", "second"),
+            ])
+            self.assertEqual(archive.answers(0), [])
+            self.assertEqual(archive.answers(7), [])

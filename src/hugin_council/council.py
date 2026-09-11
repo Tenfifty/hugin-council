@@ -254,17 +254,38 @@ class Council:
                 words = len(result.text.split())
                 status.done(session.label, f"{words} words")
 
+            aborted = False
             with ThreadPoolExecutor(max_workers=max(len(self.members), 1)) as pool:
-                list(pool.map(run, range(len(self.members))))
+                try:
+                    list(pool.map(run, range(len(self.members))))
+                except KeyboardInterrupt:
+                    # Ctrl-C lands here, on the main thread; the members are
+                    # out on workers and would run to completion unless told.
+                    # Cancelling makes each pending send raise, so the pool
+                    # winds down at once rather than after the slowest member.
+                    aborted = True
+                    for session in self.members:
+                        session.cancel()
 
-        collected = [a for a in answers if a is not None]
-        for index, answer in enumerate(collected):
+        # Whatever did come back is kept, aborted or not: an answer that was
+        # paid for is archive material even when nothing is made of it.
+        for index, answer in enumerate(answers):
+            if answer is None:
+                continue
             self._remember(f"member-{index}", self.members[index])
             body = answer.text if answer.ok else f"(failed: {answer.error})"
             (round_dir / arc.answer_filename(answer.label)).write_text(
                 f"<!-- {answer.anon} = {answer.label} -->\n\n{body}\n", encoding="utf-8"
             )
-        return round_dir, collected
+        if aborted:
+            done = sum(1 for a in answers if a is not None and a.ok)
+            (round_dir / arc.ABORTED).write_text(
+                f"Aborted by the user with {done} of {len(self.members)} answers in. "
+                "No synthesis was made.\n",
+                encoding="utf-8",
+            )
+            raise KeyboardInterrupt
+        return round_dir, [a for a in answers if a is not None]
 
     # ----------------------------------------------------------------- phase 2b
 

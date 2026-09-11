@@ -26,6 +26,9 @@ OUTCOME_FILE = "outcome.md"
 MEMBER_PROMPT = "prompt-members.md"
 SECRETARY_PROMPT = "prompt-secretary.md"
 SYNTHESIS = "synthesis.md"
+# Written when a round is broken off with Ctrl-C. The round keeps its number
+# and whatever answers had arrived; latest_synthesis() skips it already.
+ABORTED = "aborted.md"
 
 
 def slugify(text: str, words: int = 6) -> str:
@@ -37,6 +40,18 @@ def slugify(text: str, words: int = 6) -> str:
 
 def answer_filename(label: str) -> str:
     return f"answer-{label.replace(':', '-').replace('/', '-')}.md"
+
+
+_ATTRIBUTION = re.compile(r"^<!--\s*(Participant \w)\s*=\s*(\S+)\s*-->\s*\n?")
+
+
+@dataclass
+class Answer:
+    """One member's raw answer, as archived: letter, model id, text."""
+
+    anon: str
+    label: str
+    text: str
 
 
 @dataclass
@@ -128,6 +143,28 @@ class Archive:
     @property
     def brief(self) -> str | None:
         return self.read(BRIEF_FILE)
+
+    def answers(self, number: int | None = None) -> list[Answer]:
+        """The raw answers of one round (the latest by default), A first.
+
+        The attribution comment each file opens with is what makes the letter
+        recoverable; a file without one is still an answer, just unlettered.
+        """
+        if number is None:
+            number = self.rounds
+        if number < 1:
+            return []
+        found = []
+        for path in sorted(self.round_dir(number).glob("answer-*.md")):
+            body = path.read_text(encoding="utf-8")
+            match = _ATTRIBUTION.match(body)
+            if match:
+                anon, label = match.group(1), match.group(2)
+                body = body[match.end():]
+            else:
+                anon, label = "", path.stem[len("answer-"):]
+            found.append(Answer(anon=anon, label=label, text=body.strip()))
+        return sorted(found, key=lambda a: a.anon or "~")
 
     def latest_synthesis(self) -> str | None:
         for number in range(self.rounds, 0, -1):

@@ -14,29 +14,23 @@ from typing import Any
 from hugin.config import SharedConfig, load_tool
 from hugin.llm import LLMConfig
 
+# The secretary is deliberately not a member: opus holds the sessions and does
+# the file work, the members do the hard reasoning (2026-09-11).
 DEFAULT_SECRETARY = "claude:claude-opus-5:high"
-# fable-5 is out of every roster until the account is upgraded (2026-08-25).
-# It works, so this is a quota decision, not a capability one: put the two
-# commented lines back and delete this comment when the upgrade lands.
 DEFAULT_ROSTERS: dict[str, list[str]] = {
     "default": [
-        "claude:claude-opus-5:high",
-        # "claude:claude-fable-5:high",
-        "codex:gpt-5.6-sol:high",
+        "claude:claude-fable-5-1:high",
+        "codex:gpt-6-astra:high",
     ],
     # agy lives here and nowhere else: the quota is the scarce resource, so it
-    # gets spent only when breadth is asked for explicitly.
+    # gets spent only when breadth is asked for explicitly. agy bakes the
+    # reasoning level into the model slug, so there is no third field.
     "wide": [
-        "claude:claude-opus-5:high",
-        "codex:gpt-5.6-sol:high",
-        "codex:gpt-5.5:xhigh",
-        "agy:gemini-3.1-pro-high",
-        "agy:gemini-3.7-flash-high",
+        "claude:claude-fable-5-1:high",
+        "codex:gpt-6-astra:high",
+        "agy:gemini-3.8-flash-medium",
     ],
     "cheap": [
-        # haiku takes fable's place as the claude voice here. It is a smaller
-        # model rather than an older one, so the pairing is no longer
-        # same-brand-different-generation; that returns with fable.
         "claude:claude-haiku-4-5-20251001:medium",
         "codex:gpt-5.4-mini:medium",
     ],
@@ -44,10 +38,13 @@ DEFAULT_ROSTERS: dict[str, list[str]] = {
 LANGUAGE_NAMES = {"sv": "Swedish", "en": "English"}
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 # Synthesis is clustering and compression, not the hard reasoning; the hard
-# reasoning is the members'. Measured 2026-08-25: effort is part of the
-# server-side cache key for both claude and codex, so the step down costs one
-# full re-read of the secretary's conversation and every synthesis after it hits
-# the cache again. Once per council, not once per round. Set to "high" to undo.
+# reasoning is the members'. Effort is part of the cache key (measured
+# 2026-08-25), so the step down costs one re-read of the secretary's
+# conversation per council. Exceptions as of 2026-09-11: Claude Code >= 2.1.260
+# keeps the cache across effort changes on fable-5-1 only (the API supports it
+# on opus-5 too, Claude Code has not wired that yet), and codex >= 0.154 does
+# it on gpt-6-astra behind the experimental reasoning_effort_override flag.
+# With an opus-5 secretary the re-read still happens. Set to "high" to undo.
 DEFAULT_SYNTHESIS_EFFORT = "medium"
 
 
@@ -68,6 +65,9 @@ class CouncilConfig(SharedConfig):
     # Effort for phase 2b only. None means "whatever the secretary spec says".
     synthesis_effort: str | None = DEFAULT_SYNTHESIS_EFFORT
     turn_timeout: int = 1800
+    # A turn that took at least this many seconds ends with a terminal bell
+    # and, where there is a desktop, a notification. 0 turns it off.
+    notify_after: int = 30
     llm: LLMConfig = field(default_factory=LLMConfig)
     gather_prompt_path: Path | None = None
     house_prompt_path: Path | None = None
@@ -128,6 +128,7 @@ def build(merged: dict[str, Any]) -> CouncilConfig:
         hugin_dirs=hugin_dirs,
         synthesis_effort=_effort(data.get("synthesis_effort", DEFAULT_SYNTHESIS_EFFORT)),
         turn_timeout=int(data.get("turn_timeout") or 1800),
+        notify_after=int(data.get("notify_after", CouncilConfig.notify_after) or 0),
         llm=LLMConfig.from_dict(merged.get("llm") or {}),
         gather_prompt_path=_opt(data.get("gather_prompt_path")),
         house_prompt_path=_opt(data.get("house_prompt_path")),

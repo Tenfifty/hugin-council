@@ -13,13 +13,17 @@ on a non-tty, and driving the shell from a here-doc is how it gets tested.
 
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from typing import Callable
 
 try:  # prompt_toolkit is a soft dependency
     from prompt_toolkit import PromptSession
+    from prompt_toolkit.completion import Completer, Completion
     from prompt_toolkit.formatted_text import ANSI
     from prompt_toolkit.key_binding import KeyBindings
 
@@ -28,6 +32,30 @@ except ImportError:  # pragma: no cover - exercised only where it is absent
     HAVE_PT = False
 
 COUNCIL, SERIAL, ASK = "council", "serial", "ask"
+
+# What Tab completes, when the line is a slash command and nothing else yet.
+# Aliases (/c, /s, /q) are left out: nobody needs help typing one letter.
+COMMANDS = (
+    "/answer",
+    "/answers",
+    "/brief",
+    "/council",
+    "/edit",
+    "/help",
+    "/map",
+    "/promote",
+    "/quit",
+    "/serial",
+    "/solo",
+    "/status",
+)
+
+
+def complete_command(text: str, commands: tuple[str, ...] = COMMANDS) -> list[str]:
+    """Commands that ``text`` is a prefix of, if it is a lone slash word."""
+    if not text.startswith("/") or " " in text or "\n" in text:
+        return []
+    return [c for c in commands if c.startswith(text)]
 
 RESET = "\x1b[0m"
 BAR = "\x1b[48;5;236m"
@@ -153,6 +181,58 @@ class Status:
         return "\n".join(f"{BAR}{line}{RESET}" for line in self.lines())
 
 
+def _interactive() -> bool:
+    return HAVE_PT and sys.stdin.isatty()
+
+
+def _bindings() -> "KeyBindings":
+    """Enter sends; Alt-Enter and Ctrl-J insert a newline.
+
+    A council question is often several paragraphs, so the buffer is multiline
+    and Enter is rebound to accept. Alt-Enter arrives as Escape then Enter and
+    some terminals swallow it, which is why Ctrl-J (a bare line feed, which no
+    terminal interprets) is there as the fallback that Claude Code and Codex
+    also use. Shift-Enter sends nothing distinguishable in most terminals and
+    is not bound. Pasted text keeps its newlines regardless, through bracketed
+    paste.
+    """
+    keys = KeyBindings()
+
+    @keys.add("enter")
+    def _accept(event: object) -> None:
+        event.current_buffer.validate_and_handle()  # type: ignore[attr-defined]
+
+    @keys.add("escape", "enter")
+    @keys.add("c-j")
+    def _newline(event: object) -> None:
+        event.current_buffer.newline()  # type: ignore[attr-defined]
+
+    return keys
+
+
+def _continuation(width: int, line_number: int, is_soft_wrap: bool) -> str:
+    return " " * width
+
+
+if HAVE_PT:
+
+    class _CommandCompleter(Completer):
+        def get_completions(self, document, complete_event):  # type: ignore[override]
+            word = document.text_before_cursor
+            for command in complete_command(word):
+                yield Completion(command, start_position=-len(word))
+
+
+def _session(keys: "KeyBindings") -> "PromptSession":
+    return PromptSession(
+        key_bindings=keys,
+        multiline=True,
+        prompt_continuation=_continuation,
+        completer=_CommandCompleter(),
+        complete_while_typing=False,
+    )
+
+
 class Shell:
     """Reads lines, toggles mode on Tab, and keeps the bar current."""
 
@@ -161,19 +241,27 @@ class Shell:
         self.toggle = toggle
         self.mode = COUNCIL
         self.session = None
-        if HAVE_PT and sys.stdin.isatty():
-            keys = KeyBindings()
+        if _interactive():
+            keys = _bindings()
 
             @keys.add("tab")
             def _(event: object) -> None:
-                # Tab is the mode switch, not completion; there is nothing to
-                # complete here and the switch is the gesture used constantly.
+                # Tab is the mode switch, the gesture used constantly. The one
+                # exception is a half-typed slash command, where it completes:
+                # a lone "/an" is never meant as a turn to anyone.
+                buffer = event.current_buffer  # type: ignore[attr-defined]
+                if complete_command(buffer.text):
+                    if buffer.complete_state:
+                        buffer.complete_next()
+                    else:
+                        buffer.start_completion(select_first=True)
+                    return
                 self.mode = self.toggle(self.mode)
                 app = getattr(event, "app", None)
                 if app is not None:
                     app.invalidate()
 
-            self.session = PromptSession(key_bindings=keys)
+            self.session = _session(keys)
 
     def prompt(self) -> str:
         colour = MODE_COUNCIL if self.mode == COUNCIL else MODE_SERIAL
@@ -187,6 +275,50 @@ class Shell:
         )
 
 
+def edit_text(initial: str = "", editor: str | None = None) -> str:
+    """Hand a turn to $VISUAL or $EDITOR and return what came back.
+
+    For the turn that is too long for a prompt even with newlines. The file is
+    markdown so the editor highlights it, and a turn left empty means "never
+    mind" rather than an empty broadcast.
+    """
+    command = editor or os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
+    with tempfile.NamedTemporaryFile("w+", suffix=".md", encoding="utf-8", delete=False) as handle:
+        handle.write(initial)
+        path = handle.name
+    try:
+        subprocess.call([*command.split(), path])
+        with open(path, encoding="utf-8") as handle:
+            return handle.read().strip()
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def notify(text: str, stream=None) -> None:
+    """Say that a long wait is over, to someone who has looked away.
+
+    A bell in the terminal, which most emulators turn into a taskbar flag, and
+    a desktop notification when there is a desktop and notify-send to reach it.
+    Nothing is raised: a notification that fails is not worth a message.
+    """
+    out = stream or sys.stdout
+    if getattr(out, "isatty", lambda: False)():
+        out.write("\a")
+        out.flush()
+    if shutil.which("notify-send") and (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        try:
+            subprocess.Popen(
+                ["notify-send", "--app-name=hugin-council", "hugin-council", text],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            pass
+
+
 def ask_prompt(where: str) -> str:
     """Read the first question.
 
@@ -196,11 +328,13 @@ def ask_prompt(where: str) -> str:
     and where we are: no slug, no rounds, no usage.
     """
     text = f"\n{MODE_ASK}{ASK}{RESET}> "
-    if not (HAVE_PT and sys.stdin.isatty()):
+    if not _interactive():
         return input(f"\n{ASK}> ")
     bar = (
         f"{BAR} {MODE_ASK}ASK{RESET} "
         f"{KEY}\u00b7{RESET} {VALUE}{where}{RESET} "
-        f"{KEY}\u00b7{RESET} {KEY}the secretary gathers first, then the members answer{RESET}"
+        f"{KEY}\u00b7{RESET} {KEY}Alt-Enter for a new line; the secretary gathers first{RESET}"
     )
-    return PromptSession().prompt(ANSI(text), bottom_toolbar=lambda: ANSI(f"{BAR}{bar}{RESET}"))
+    return _session(_bindings()).prompt(
+        ANSI(text), bottom_toolbar=lambda: ANSI(f"{BAR}{bar}{RESET}")
+    )

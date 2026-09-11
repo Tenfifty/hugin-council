@@ -55,3 +55,33 @@ class RenderTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TableTests(unittest.TestCase):
+    TABLE = "| Path | Cost | Risk |\n|:-----|-----:|------|\n| V1 `fzf` | low | **high** |\n| V2 | high | low |"
+
+    def test_table_is_aligned_with_a_bold_header_and_a_rule(self) -> None:
+        out = render(self.TABLE, width=100)
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertIn(THEME.header, lines[0])
+        self.assertIn("├", lines[1])
+        # Columns line up: every pipe in the same place on every row.
+        plain = [__import__("re").sub(r"\x1b\[[0-9;]*m", "", l) for l in lines]
+        self.assertEqual({p.index("│", 3) for p in (plain[0], plain[2], plain[3])}.__len__(), 1)
+        self.assertNotIn("|", plain[0])
+        # Right-aligned Cost column.
+        self.assertIn("  low", plain[2])
+
+    def test_a_table_too_wide_for_the_terminal_is_left_as_written(self) -> None:
+        out = render(self.TABLE, width=20)
+        self.assertIn("| Path | Cost | Risk |", out)
+
+    def test_pipes_inside_code_spans_are_not_columns(self) -> None:
+        out = render("| a | b |\n|---|---|\n| `x|y` | z |", width=100)
+        plain = __import__("re").sub(r"\x1b\[[0-9;]*m", "", out).splitlines()
+        self.assertIn("x|y", plain[2])
+        self.assertEqual(plain[2].count("│"), 3)
+
+    def test_colour_off_leaves_tables_alone(self) -> None:
+        self.assertEqual(render(self.TABLE, colour=False), self.TABLE)
