@@ -277,8 +277,8 @@ class CouncilFlowTests(unittest.TestCase):
         self.council.round("How should I do this?")
         round_dir = self.archive.round_dir(1)
         prompt = (round_dir / arc.MEMBER_PROMPT).read_text()
-        self.assertIn("distinct ways forward", prompt)
-        self.assertIn("council of 2", prompt)
+        self.assertIn("without seeing the others", prompt)
+        self.assertIn("one of 2 participants", prompt)
         for label in ("claude:a", "codex:b"):
             body = (round_dir / arc.answer_filename(label)).read_text()
             self.assertIn("reply", body)
@@ -290,13 +290,13 @@ class CouncilFlowTests(unittest.TestCase):
         prompt = (self.archive.round_dir(1) / arc.SECRETARY_PROMPT).read_text()
         self.assertIn("Participant A", prompt)
         self.assertNotIn("claude:a", prompt)
-        self.assertIn("may not decide", prompt)
+        self.assertIn("you do not decide", prompt)
 
     def test_second_round_carries_the_synthesis_and_forbids_deference(self) -> None:
         self.council.round("first")
         self.council.round("second")
         prompt = (self.archive.round_dir(2) / arc.MEMBER_PROMPT).read_text()
-        self.assertIn("Do not revise your position", prompt)
+        self.assertIn("Hold your own view", prompt)
         self.assertIn("second", prompt)
 
     def test_previous_synthesis_is_handed_to_the_secretary(self) -> None:
@@ -329,7 +329,7 @@ class CouncilFlowTests(unittest.TestCase):
         self.council.serial("first")
         self.council.serial("second")
         serial = [s for s in self.made if s.read_only is False][-1]
-        self.assertIn("side channel", serial.sent[0])
+        self.assertIn("This is not that\nrole", serial.sent[0])
         self.assertNotIn("side channel", serial.sent[1])
 
     def test_promote_is_a_door_not_a_leak(self) -> None:

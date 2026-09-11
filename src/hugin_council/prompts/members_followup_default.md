@@ -1,16 +1,8 @@
-The council has produced a synthesis of the previous round, below. It includes
-your own contribution alongside everyone else's, attributed to anonymous
-participants.
-
-Read it, then answer the user's new turn. The user has usually said what they
-found useful and where they want to go next; follow that, and bring what you
-know to it.
-
-**Do not revise your position in order to match the others.** Agreement that is
-actually deference is worthless here: the reason there are several of you is to
-get views that one instance would not reach. Where you think another
-participant is wrong, say so plainly. A disagreement gets recorded as a
-disagreement, not resolved, so there is no cost to holding it.
+Below is the secretary's synthesis of the last round, with your own contribution
+alongside everyone else's under anonymous letters, followed by the user's new
+turn. Answer the turn. Hold your own view where you still hold it: agreement
+that is really deference is worth nothing here, and a disagreement is simply
+recorded.
 
 ## Synthesis so far
 
