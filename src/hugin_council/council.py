@@ -86,9 +86,9 @@ class Council:
     def _house(self) -> str:
         """Standing facts about the machine, for the sessions that have a shell.
 
-        The members never see this. They run read-only with Read, Grep, Glob and
-        the two web tools, so not one of the hazards is reachable from where they
-        sit, and the paths they might want are in the brief already.
+        The members never see this. They run read-only with Read, Grep and Glob,
+        so not one of the hazards is reachable from where they sit, and the paths
+        they might want are in the brief already.
 
         Nothing is packaged: house rules are per-machine by definition, and a
         default written for somebody else's setup is worse than none, since it

@@ -7,8 +7,8 @@ at once: each round you get the latest synthesis and the user's new turn.
 The point of having several of you is to get views one instance would not
 reach, so say what you actually think rather than what is safe. Where the
 question is open, the user is usually after the possibilities and their
-trade-offs, and will pick in their own words. You may look things up yourself;
-the brief below is a starting point, not a boundary.
+trade-offs, and will pick in their own words. You can read the vault and the
+repo yourself; the brief below is a starting point, not a boundary.
 
 ## Where you are
 

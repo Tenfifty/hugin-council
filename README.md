@@ -290,13 +290,19 @@ question meant for the secretary that goes to three members costs a round, and
 one meant for the council that goes to the secretary is simply lost. The mode has
 to be visible in the prompt itself, not only in the status line.
 
-### Members are read-only, the secretary writes
+### Members read the disk, the secretary does everything
 
 `codex -s read-only`, `agy --mode plan --sandbox`, and for claude an explicit
-`--tools=Read,Grep,Glob,WebSearch,WebFetch` plus `--strict-mcp-config` with an
-empty server list. Otherwise three agents can write the same file without
-knowing about each other, which is an unpleasant class of bug to diagnose
-afterwards.
+`--tools=Read,Grep,Glob` plus `--strict-mcp-config` with an empty server list.
+Otherwise three agents can write the same file without knowing about each
+other, which is an unpleasant class of bug to diagnose afterwards.
+
+The members had the web too until 2026-09-11. What they need is the vault and
+the repo, which the disk gives them; web material belongs in the brief, where
+every member reads the same version of it, and the secretary has the web for
+that. Codex's read-only sandbox has no network anyway, so this also evens the
+members out. agy has no flag for it, so an agy member keeps whatever plan mode
+gives it.
 
 Not `--permission-mode plan`, which was the first attempt. Plan mode is Claude
 Code's planning workflow rather than a sandbox: a member run under it wrote its
