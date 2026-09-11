@@ -21,6 +21,8 @@ from . import archive as arc
 from . import context
 from .config import CouncilConfig, load
 from .council import SECRETARY_COUNCIL, SECRETARY_SERIAL, Council
+
+CRITIQUE = "critique"
 from .markdown import render
 from .tui import (
     COUNCIL,
@@ -49,6 +51,7 @@ Typing
   Ctrl-C              break off the round in progress; the council survives
 
 Commands
+  /critique [focus]   members review each other's last answers, then synthesis
   /promote <text>     carry something from serial into the next broadcast
   /solo [text]        dismiss the members for good; text records the outcome
   /brief              print the gathered brief
@@ -233,6 +236,12 @@ def _loop(council: Council) -> int:
         if line == "/answers" or line.startswith("/answers ") or line.startswith("/answer "):
             _print_answers(council, line.split()[1:])
             continue
+        if line == "/critique" or line.startswith("/critique "):
+            if council.dismissed:
+                print("The members were dismissed. Start a new council.")
+                continue
+            _run_turn(council, CRITIQUE, line[len("/critique"):].strip())
+            continue
         if line.startswith("/promote"):
             text = line[len("/promote"):].strip()
             if not text:
@@ -283,11 +292,18 @@ def _run_turn(council: Council, target: str, text: str) -> bool:
     wait needs: Ctrl-C brings the prompt back with the council intact, and a
     wait long enough to have looked away from ends with a notification."""
     started = time.monotonic()
-    what = "secretary" if target == SERIAL else f"round {council.archive.rounds + 1}"
+    if target == SERIAL:
+        what = "secretary"
+    elif target == CRITIQUE:
+        what = f"critique (round {council.archive.rounds + 1})"
+    else:
+        what = f"round {council.archive.rounds + 1}"
     try:
         if target == SERIAL:
             print()
             _show(council.serial(text))
+        elif target == CRITIQUE:
+            _show(council.critique(text))
         else:
             _show(council.round(text))
     except SessionError as exc:

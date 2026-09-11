@@ -465,3 +465,44 @@ class AnswersTests(unittest.TestCase):
             ])
             self.assertEqual(archive.answers(0), [])
             self.assertEqual(archive.answers(7), [])
+
+
+class CritiqueTests(CouncilFlowTests):
+    """Reuses the flow fixture (two fake members, a fake secretary), which also
+    reruns its tests under this name; cheap, and it keeps one fixture."""
+
+    def test_each_member_sees_the_others_answers_and_not_its_own(self) -> None:
+        a, b = self.council.members
+        a.reply, b.reply = "answer from a", "answer from b"
+        self.council.round("first")
+        a.reply = b.reply = "a review"
+        self.council.critique("the cost estimates")
+        prompt_a, prompt_b = a.sent[-1], b.sent[-1]
+        self.assertIn("answer from b", prompt_a)
+        self.assertNotIn("answer from a", prompt_a)
+        self.assertIn("answer from a", prompt_b)
+        self.assertNotIn("answer from b", prompt_b)
+        self.assertIn("### Participant B", prompt_a)
+        self.assertIn("the cost estimates", prompt_a)
+        self.assertNotIn("{{", prompt_a)
+        rd = self.archive.round_dir(2)
+        self.assertTrue((rd / "prompt-members-A.md").exists())
+        self.assertTrue((rd / "prompt-members-B.md").exists())
+        self.assertTrue((rd / arc.SYNTHESIS).exists())
+        secretary_prompt = (rd / arc.SECRETARY_PROMPT).read_text()
+        self.assertIn("reviewed each other", secretary_prompt)
+        self.assertIn("the cost estimates", secretary_prompt)
+
+    def test_a_critique_needs_two_answers_to_review(self) -> None:
+        from hugin.session import SessionError
+
+        with self.assertRaises(SessionError):
+            self.council.critique()
+        a, _ = self.council.members
+        self.council.round("first")
+        # Knock one answer out on disk: only one left to review.
+        (self.archive.round_dir(1) / arc.answer_filename(a.label)).write_text(
+            f"<!-- Participant A = {a.label} -->\n\n(failed: boom)\n"
+        )
+        with self.assertRaises(SessionError):
+            self.council.critique()

@@ -24,6 +24,8 @@ BRIEF_FILE = "brief.md"
 OUTCOME_FILE = "outcome.md"
 
 MEMBER_PROMPT = "prompt-members.md"
+# A critique round sends each member a different prompt, one file per letter.
+MEMBER_PROMPT_FOR = "prompt-members-{letter}.md"
 SECRETARY_PROMPT = "prompt-secretary.md"
 SYNTHESIS = "synthesis.md"
 # Written when a round is broken off with Ctrl-C. The round keeps its number
@@ -52,6 +54,10 @@ class Answer:
     anon: str
     label: str
     text: str
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.text) and not self.text.startswith("(failed:")
 
 
 @dataclass

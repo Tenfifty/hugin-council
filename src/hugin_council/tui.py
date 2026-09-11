@@ -40,6 +40,7 @@ COMMANDS = (
     "/answers",
     "/brief",
     "/council",
+    "/critique",
     "/edit",
     "/help",
     "/map",

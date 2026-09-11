@@ -72,6 +72,7 @@ class CouncilConfig(SharedConfig):
     gather_prompt_path: Path | None = None
     house_prompt_path: Path | None = None
     members_prompt_path: Path | None = None
+    critique_prompt_path: Path | None = None
     synthesis_prompt_path: Path | None = None
     serial_prompt_path: Path | None = None
 
@@ -133,6 +134,7 @@ def build(merged: dict[str, Any]) -> CouncilConfig:
         gather_prompt_path=_opt(data.get("gather_prompt_path")),
         house_prompt_path=_opt(data.get("house_prompt_path")),
         members_prompt_path=_opt(data.get("members_prompt_path")),
+        critique_prompt_path=_opt(data.get("critique_prompt_path")),
         synthesis_prompt_path=_opt(data.get("synthesis_prompt_path")),
         serial_prompt_path=_opt(data.get("serial_prompt_path")),
     )

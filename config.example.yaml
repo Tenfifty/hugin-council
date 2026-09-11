@@ -57,6 +57,7 @@ council:
 
   # Override any packaged prompt with your own file.
   # synthesis_prompt_path: ~/notes/instructions/council_synthesis.md
+  # critique_prompt_path: ~/notes/instructions/council_critique.md
 
   # The standing facts about YOUR machine, pasted into the secretary's gather and
   # serial prompts. Nothing is packaged and nothing is inferred, so without this

@@ -224,7 +224,58 @@ class Council:
         prompt = self._member_prompt(turn, self.archive.brief, synthesis)
         round_dir = self.archive.open_round()
         (round_dir / arc.MEMBER_PROMPT).write_text(prompt, encoding="utf-8")
+        return round_dir, self._ask_all(round_dir, [prompt] * len(self.members))
 
+    def _critique_prompts(self, focus: str) -> list[str]:
+        """One prompt per member: everyone else's last answer, not their own."""
+        answers = [a for a in self.archive.answers() if a.ok]
+        if len(answers) < 2:
+            raise SessionError("a critique needs at least two answers in the last round")
+        synthesis = self.archive.latest_synthesis() or "(no synthesis yet)"
+        template = self._prompt("members_critique", self.cfg.critique_prompt_path)
+        prompts = []
+        for session in self.members:
+            others = [a for a in answers if a.label != session.label]
+            block = "\n\n".join(f"### {a.anon}\n\n{a.text}" for a in others)
+            prompts.append(
+                fill(
+                    template,
+                    FOCUS=f"## What the user wants looked at in particular\n\n{focus}" if focus else "",
+                    SYNTHESIS=synthesis,
+                    OTHERS=block,
+                )
+            )
+        return prompts
+
+    def critique(self, focus: str = "") -> str:
+        """Have the members review each other's last answers, then synthesise.
+
+        A round like any other in the archive, so the objections land under the
+        options they concern and keep the numbering. The members' own answers
+        are not resent: each holds its own session.
+        """
+        prompts = self._critique_prompts(focus)
+        round_dir = self.archive.open_round()
+        for session, prompt in zip(self.members, prompts):
+            letter = self.anon_map[session.label][-1]
+            (round_dir / arc.MEMBER_PROMPT_FOR.format(letter=letter)).write_text(
+                prompt, encoding="utf-8"
+            )
+        answers = self._ask_all(round_dir, prompts)
+        failed = [a.label for a in answers if not a.ok]
+        if failed:
+            self.note(f"no answer from: {', '.join(failed)}")
+        turn = (
+            "The participants have reviewed each other's previous answers; the answers "
+            "below are those reviews. Fold each objection or concession under the option "
+            "it concerns, attributed, and note where a participant changed position."
+        )
+        if focus:
+            turn += f"\n\nThe user asked them to look in particular at: {focus}"
+        return self.synthesise(round_dir, answers, turn)
+
+    def _ask_all(self, round_dir: Path, prompts: list[str]) -> list[MemberAnswer]:
+        """Send one prompt per member in parallel and archive what comes back."""
         anon = self.anon_map
         answers: list[MemberAnswer | None] = [None] * len(self.members)
 
@@ -241,7 +292,7 @@ class Council:
                 session = self.members[index]
                 status.start(session.label)
                 try:
-                    result = session.send(prompt, timeout=self.cfg.turn_timeout)
+                    result = session.send(prompts[index], timeout=self.cfg.turn_timeout)
                 except SessionError as exc:
                     answers[index] = MemberAnswer(
                         label=session.label, anon=anon[session.label], text="", error=str(exc)
@@ -285,7 +336,7 @@ class Council:
                 encoding="utf-8",
             )
             raise KeyboardInterrupt
-        return round_dir, [a for a in answers if a is not None]
+        return [a for a in answers if a is not None]
 
     # ----------------------------------------------------------------- phase 2b
 

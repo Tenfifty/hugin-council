@@ -27,6 +27,16 @@ worth having.
 
 Rounds repeat 2 and 2b. Your turn goes to every member verbatim.
 
+`/critique` is a round with a different phase 2: each member gets the other
+members' raw answers from the last round, lettered as in the map, and is asked
+where they are right about something it missed, where they are wrong and why,
+and which options it now favours. Their own answer is not resent, since each
+holds its own session. The synthesis then folds the reviews under the options
+they concern, so an objection ends up as an attribute of a path, which is where
+the map puts objections anyway. The members otherwise never see each other, and
+this is the one deliberate exception: it is asked for, and it happens after
+independent answers exist, so it cannot pull round one towards consensus.
+
 ## Using it
 
 ```bash
@@ -52,6 +62,7 @@ council> ...            broadcast to the members, then synthesis
 serial>  ...            the secretary only; never reaches the members
 /serial /s  /council /c switch mode
 > ...                   one-shot to the secretary without leaving council mode
+/critique [focus]       members review each other's last answers, then synthesis
 /promote <text>         carry something from serial into the next broadcast
 /solo [text]            dismiss the members for good, recording the outcome
 /brief  /map  /status   print the brief, the latest synthesis, the roster
@@ -152,6 +163,7 @@ would otherwise have been fields:
   brief.md                              phase 1, if it ran
   round-01/
     prompt-members.md                   exactly what was broadcast
+                                        (prompt-members-A.md etc. in a critique round)
     answer-claude-opus-5-high.md
     answer-claude-fable-5-high.md
     answer-codex-gpt-5.6-sol-high.md
