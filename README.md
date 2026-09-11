@@ -326,16 +326,16 @@ council:
   secretary: claude:claude-opus-5:high
   roster: default
   rosters:
-    default: [claude:claude-fable-5-1:high, codex:gpt-6-astra:high]
-    wide:    [claude:claude-fable-5-1:high, codex:gpt-6-astra:high, agy:gemini-3.8-flash-medium]
+    default: [claude:claude-fable-5-1:medium, codex:gpt-6-astra:medium]
+    wide:    [claude:claude-fable-5-1:medium, codex:gpt-6-astra:medium, agy:gemini-3.8-flash-medium]
     cheap:   [claude:claude-haiku-4-5-20251001:medium, codex:gpt-5.4-mini:medium]
 ```
 
 The secretary is not on any roster. Opus holds the sessions and does the file
 work; the members (Fable 5.1, GPT 6 Astra, and in `wide` Gemini 3.8 Flash) do
-the hard reasoning, so the two lists do not overlap. Members run at `high`,
-which is where the effort belongs; synthesis is stepped down separately via
-`synthesis_effort`.
+the hard reasoning, so the two lists do not overlap. Members run at `medium`
+in both rosters (since 2026-09-11; `high` before that), with the secretary at
+`high` and synthesis stepped down separately via `synthesis_effort`.
 
 `--roster wide` selects, `--member` appends for a one-off, `--secretary`,
 `--secretary-model` and `--secretary-effort` override the default. A flag and a

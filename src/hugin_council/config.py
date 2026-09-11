@@ -19,15 +19,15 @@ from hugin.llm import LLMConfig
 DEFAULT_SECRETARY = "claude:claude-opus-5:high"
 DEFAULT_ROSTERS: dict[str, list[str]] = {
     "default": [
-        "claude:claude-fable-5-1:high",
-        "codex:gpt-6-astra:high",
+        "claude:claude-fable-5-1:medium",
+        "codex:gpt-6-astra:medium",
     ],
     # agy lives here and nowhere else: the quota is the scarce resource, so it
     # gets spent only when breadth is asked for explicitly. agy bakes the
     # reasoning level into the model slug, so there is no third field.
     "wide": [
-        "claude:claude-fable-5-1:high",
-        "codex:gpt-6-astra:high",
+        "claude:claude-fable-5-1:medium",
+        "codex:gpt-6-astra:medium",
         "agy:gemini-3.8-flash-medium",
     ],
     "cheap": [

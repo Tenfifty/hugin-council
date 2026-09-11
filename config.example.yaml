@@ -15,14 +15,14 @@ council:
   # hard reasoning, so the two lists do not overlap.
   rosters:
     default:
-      - claude:claude-fable-5-1:high
-      - codex:gpt-6-astra:high
+      - claude:claude-fable-5-1:medium
+      - codex:gpt-6-astra:medium
     # agy appears here and nowhere else: the quota is the scarce resource, so it
     # is spent only when breadth is asked for explicitly. Note that agy bakes the
     # reasoning level into the gemini model slug, so no third field is needed.
     wide:
-      - claude:claude-fable-5-1:high
-      - codex:gpt-6-astra:high
+      - claude:claude-fable-5-1:medium
+      - codex:gpt-6-astra:medium
       - agy:gemini-3.8-flash-medium
     cheap:
       - claude:claude-haiku-4-5-20251001:medium
