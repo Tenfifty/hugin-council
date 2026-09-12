@@ -19,7 +19,7 @@ from hugin.session import Event, SessionError, Usage
 
 from . import archive as arc
 from . import context
-from .config import CouncilConfig, load
+from .config import DEFAULT_ROSTERS, DEFAULT_SECRETARY, CouncilConfig, load
 from .council import SECRETARY_COUNCIL, SECRETARY_SERIAL, Council
 
 CRITIQUE = "critique"
@@ -413,50 +413,133 @@ def _normalise(argv: list[str]) -> list[str]:
     return ["ask", *argv]
 
 
-def _parser() -> argparse.ArgumentParser:
+def _roster_lines(cfg: CouncilConfig | None) -> str:
+    """One line per named roster, the members after it, the active one marked."""
+    rosters = cfg.rosters if cfg else DEFAULT_ROSTERS
+    active = cfg.roster if cfg else "default"
+    width = max(len(name) for name in rosters) if rosters else 0
+    lines = []
+    for name in sorted(rosters, key=lambda n: (n != active, n)):
+        mark = "*" if name == active else " "
+        lines.append(f"  {mark} {name.ljust(width)}  {', '.join(rosters[name])}")
+    return "\n".join(lines)
+
+
+def _epilog(cfg: CouncilConfig | None) -> str:
+    secretary = cfg.secretary if cfg else DEFAULT_SECRETARY
+    source = "config (~/.config/hugin/council.yaml)" if cfg else "built-in defaults; config failed to load"
+    return f"""\
+rosters (* = default; from {source}):
+{_roster_lines(cfg)}
+
+  Pick one with --roster NAME. --member appends a seat on top of the chosen
+  roster for this run only. Define your own under council.rosters in
+  ~/.config/hugin/council.yaml; council.roster names the default.
+
+secretary: {secretary}
+  The secretary is not on any roster. It gathers context, holds the sessions,
+  folds the answers into the map. Override with --secretary, or narrower with
+  --secretary-model / --secretary-effort.
+
+member syntax: PROVIDER[:MODEL[:EFFORT]]
+  provider   claude, codex, agy
+  model      provider's model id; omitted means the provider's default
+  effort     low, medium, high, xhigh, max (agy bakes it into the model id)
+
+examples:
+  hugin-council                                   ask; type the question in the TUI
+  hugin-council "which approach?"                 question on argv
+  hugin-council --roster wide                     the wide roster (spends the agy quota)
+  hugin-council --roster cheap
+  hugin-council --member agy:gemini-3.1-pro-high  default roster plus one seat
+  hugin-council --secretary codex:gpt-5.6-sol --secretary-effort xhigh
+  hugin-council resume                            latest council
+  hugin-council resume 2026-08-25-some-question
+  hugin-council list
+
+Bare flags imply ask. Full docs: README.md in the hugin-council repo.
+"""
+
+
+def _parser(cfg: CouncilConfig | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hugin-council",
         description="Ask one question, get answers from several models, folded into one map.",
+        epilog=_epilog(cfg),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    sub = parser.add_subparsers(dest="command")
+    sub = parser.add_subparsers(dest="command", metavar="{ask,resume,list}")
 
     def add_roster_flags(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--roster", help="named roster from config (default: default)")
+        rosters = cfg.rosters if cfg else DEFAULT_ROSTERS
+        active = cfg.roster if cfg else "default"
+        p.add_argument(
+            "--roster",
+            metavar="NAME",
+            help=(
+                f"named roster from config; one of {', '.join(sorted(rosters))} "
+                f"(default: {active}). See `hugin-council --help` for the members"
+            ),
+        )
         p.add_argument(
             "--member",
             action="append",
             metavar="PROVIDER[:MODEL[:EFFORT]]",
-            help="append one member for this run; repeatable",
+            help="append one seat to the chosen roster for this run; repeatable",
         )
-        p.add_argument("--secretary", metavar="PROVIDER[:MODEL[:EFFORT]]")
-        p.add_argument("--secretary-model")
-        p.add_argument("--secretary-effort", choices=("low", "medium", "high", "xhigh", "max"))
+        p.add_argument(
+            "--secretary",
+            metavar="PROVIDER[:MODEL[:EFFORT]]",
+            help=f"replace the secretary (default: {cfg.secretary if cfg else DEFAULT_SECRETARY})",
+        )
+        p.add_argument("--secretary-model", metavar="MODEL", help="keep the provider, swap the model")
+        p.add_argument(
+            "--secretary-effort",
+            choices=("low", "medium", "high", "xhigh", "max"),
+            help="keep provider and model, change the effort",
+        )
 
-    ask = sub.add_parser("ask", help="start a new council (the default)")
+    ask = sub.add_parser(
+        "ask",
+        help="start a new council (the default; bare flags or a question imply it)",
+        epilog=_epilog(cfg),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     ask.add_argument("question", nargs="*", help="optional; asked in the TUI if omitted")
     add_roster_flags(ask)
     ask.set_defaults(func=_cmd_ask)
 
-    resume = sub.add_parser("resume", help="resume the latest council, or one by slug")
-    resume.add_argument("slug", nargs="?")
+    resume = sub.add_parser(
+        "resume",
+        help="resume the latest council, or one by slug (see `list`)",
+        description="Resume a council. Roster flags apply to the resumed council.",
+    )
+    resume.add_argument("slug", nargs="?", help="council slug from `hugin-council list`; latest if omitted")
     add_roster_flags(resume)
     resume.set_defaults(func=_cmd_resume)
 
-    listing = sub.add_parser("list", help="list councils")
+    listing = sub.add_parser("list", help="list councils in the state dir")
     listing.set_defaults(func=_cmd_list)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = _parser()
+    # Config first so --help can list the rosters that are actually configured.
+    # A broken config must not take --help down with it, so the error is held
+    # until after parsing and the parser falls back to the built-in defaults.
+    cfg: CouncilConfig | None
+    try:
+        cfg = load()
+        config_error: Exception | None = None
+    except (OSError, ValueError) as exc:
+        cfg, config_error = None, exc
+    parser = _parser(cfg)
     args = parser.parse_args(_normalise(list(argv if argv is not None else sys.argv[1:])))
     for attr in ("question", "roster", "member", "secretary", "secretary_model", "secretary_effort"):
         if not hasattr(args, attr):
             setattr(args, attr, None)
-    try:
-        cfg = load()
-    except (OSError, ValueError) as exc:
-        print(f"config error: {exc}", file=sys.stderr)
+    if cfg is None:
+        print(f"config error: {config_error}", file=sys.stderr)
         return 2
     try:
         return int(args.func(cfg, args))
